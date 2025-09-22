@@ -14,6 +14,8 @@ interface RenovationPanelProps {
   mimeType: string;
   isFinetuningMode: boolean;
   onExitFinetuning: () => void;
+  categories: ProductCategory[];
+  products: RegisteredProduct[];
 }
 
 const TABS: { id: RenovationMode; name: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
@@ -24,7 +26,17 @@ const TABS: { id: RenovationMode; name: string; icon: React.FC<React.SVGProps<SV
   { id: 'person', name: '人物', icon: UserGroupIcon },
 ];
 
-const RenovationPanel: React.FC<RenovationPanelProps> = ({ appMode, onGenerate, isDisabled, activeImage, mimeType, isFinetuningMode, onExitFinetuning }) => {
+const RenovationPanel: React.FC<RenovationPanelProps> = ({ 
+  appMode, 
+  onGenerate, 
+  isDisabled, 
+  activeImage, 
+  mimeType, 
+  isFinetuningMode, 
+  onExitFinetuning,
+  categories,
+  products
+}) => {
   const [activeTab, setActiveTab] = useState<RenovationMode>('oneClick');
   const [finetuneActiveTab, setFinetuneActiveTab] = useState<'partial' | 'furniture' | 'person' | 'products'>('partial');
   const [customPrompt, setCustomPrompt] = useState('');
@@ -38,8 +50,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({ appMode, onGenerate, 
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
-  const [products, setProducts] = useState<RegisteredProduct[]>([]);
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   
@@ -52,31 +63,11 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({ appMode, onGenerate, 
 
 
   useEffect(() => {
-    if (activeTab === 'products' || (isFinetuningMode && finetuneActiveTab === 'products')) {
-      try {
-        const storedProducts = localStorage.getItem('registeredProducts');
-        const storedCategories = localStorage.getItem('productCategories');
-        if (storedProducts) {
-          setProducts(JSON.parse(storedProducts));
-        } else {
-          setProducts([]);
-        }
-        if (storedCategories) {
-          const parsedCategories = JSON.parse(storedCategories);
-          setCategories(parsedCategories);
-          if (parsedCategories.length > 0 && !selectedCategoryId) {
-            setSelectedCategoryId(parsedCategories[0].id);
-          }
-        } else {
-          setCategories([]);
-        }
-      } catch (e) {
-        console.error("Failed to load data from localStorage", e);
-        setProducts([]);
-        setCategories([]);
-      }
+    // When categories are loaded, if no category is selected or the selected one is not in the list, select the first one.
+    if (categories.length > 0 && !categories.find(c => c.id === selectedCategoryId)) {
+      setSelectedCategoryId(categories[0].id);
     }
-  }, [activeTab, isFinetuningMode, finetuneActiveTab, selectedCategoryId]);
+  }, [categories, selectedCategoryId]);
 
 
   useEffect(() => {

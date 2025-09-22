@@ -1,88 +1,72 @@
-import React, { useState, useEffect, useRef, useId } from 'react';
+import React, { useState, useRef, useId } from 'react';
 import type { RegisteredProduct, ProductCategory } from '../types';
 import { UploadIcon, TrashIcon, ArrowUturnLeftIcon, PlusCircleIcon, CubeIcon } from './Icon';
+import { db, storage } from '../services/firebase';
+import { collection, getDocs, addDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
-const processFile = (file: File): Promise<{ src: string }> => {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
-      reject(new Error('Invalid file type'));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      resolve({ src: reader.result as string });
-    };
-    reader.onerror = () => {
-      reject(new Error('Failed to read file'));
-    };
-    reader.readAsDataURL(file);
-  });
-};
+interface DatabasePageProps {
+  onNavigateBack: () => void;
+  categories: ProductCategory[];
+  products: RegisteredProduct[];
+  setCategories: React.Dispatch<React.SetStateAction<ProductCategory[]>>;
+  setProducts: React.Dispatch<React.SetStateAction<RegisteredProduct[]>>;
+}
 
-const DatabasePage: React.FC<{ onNavigateBack: () => void }> = ({ onNavigateBack }) => {
-  const [products, setProducts] = useState<RegisteredProduct[]>([]);
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
+const DatabasePage: React.FC<DatabasePageProps> = ({ 
+  onNavigateBack, 
+  categories, 
+  products, 
+  setCategories, 
+  setProducts 
+}) => {
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
   const [newCategoryName, setNewCategoryName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputId = useId();
 
-  useEffect(() => {
-    try {
-      const storedProducts = localStorage.getItem('registeredProducts');
-      if (storedProducts) {
-        setProducts(JSON.parse(storedProducts));
-      }
-      const storedCategories = localStorage.getItem('productCategories');
-      if (storedCategories) {
-        setCategories(JSON.parse(storedCategories));
-      } else {
-        // デフォルトのカテゴリを作成
-        const defaultCategories = [{ id: 'default-wallpaper', name: '壁紙' }, { id: 'default-furniture', name: '家具' }];
-        setCategories(defaultCategories);
-        localStorage.setItem('productCategories', JSON.stringify(defaultCategories));
-      }
-    } catch (e) {
-      console.error("Failed to load data from localStorage", e);
-    }
-  }, []);
-
-  const saveProducts = (newProducts: RegisteredProduct[]) => {
-    setProducts(newProducts);
-    try {
-      localStorage.setItem('registeredProducts', JSON.stringify(newProducts));
-    } catch (e) {
-      console.error("Failed to save products to localStorage", e);
-    }
-  };
-  
-  const saveCategories = (newCategories: ProductCategory[]) => {
-    setCategories(newCategories);
-    try {
-      localStorage.setItem('productCategories', JSON.stringify(newCategories));
-    } catch (e) {
-      console.error("Failed to save categories to localStorage", e);
-    }
-  };
-
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (newCategoryName.trim() === '') return;
-    const newCategory: ProductCategory = {
-      id: `${Date.now()}`,
-      name: newCategoryName.trim(),
-    };
-    saveCategories([...categories, newCategory]);
-    setNewCategoryName('');
+    try {
+      const docRef = await addDoc(collection(db, 'categories'), { name: newCategoryName.trim() });
+      const newCategory: ProductCategory = { id: docRef.id, name: newCategoryName.trim() };
+      setCategories([...categories, newCategory]);
+      setNewCategoryName('');
+    } catch (e) {
+      console.error("Error adding category: ", e);
+    }
   };
   
-  const handleDeleteCategory = (categoryId: string) => {
+  const handleDeleteCategory = async (categoryId: string) => {
     if (window.confirm('このカテゴリーを削除しますか？カテゴリー内のすべての商品も削除されます。')) {
-      const newCategories = categories.filter(c => c.id !== categoryId);
-      const newProducts = products.filter(p => p.categoryId !== categoryId);
-      saveCategories(newCategories);
-      saveProducts(newProducts);
-      if(activeCategoryId === categoryId) {
-        setActiveCategoryId('all');
+      try {
+        // Delete all products in the category from Firestore and Storage
+        const q = query(collection(db, "products"), where("categoryId", "==", categoryId));
+        const querySnapshot = await getDocs(q);
+        const deletePromises: Promise<void>[] = [];
+        querySnapshot.forEach((docSnapshot) => {
+          const product = { id: docSnapshot.id, ...docSnapshot.data() } as RegisteredProduct;
+          // Delete image from storage
+          const imageRef = ref(storage, product.src);
+          deletePromises.push(deleteObject(imageRef));
+          // Delete product document from firestore
+          deletePromises.push(deleteDoc(doc(db, "products", product.id)));
+        });
+        await Promise.all(deletePromises);
+
+        // Delete the category
+        await deleteDoc(doc(db, "categories", categoryId));
+
+        // Update state
+        const newCategories = categories.filter(c => c.id !== categoryId);
+        setCategories(newCategories);
+        setProducts(products.filter(p => p.categoryId !== categoryId));
+
+        if(activeCategoryId === categoryId) {
+          setActiveCategoryId('all');
+        }
+      } catch (e) {
+        console.error("Error deleting category: ", e);
       }
     }
   };
@@ -90,16 +74,31 @@ const DatabasePage: React.FC<{ onNavigateBack: () => void }> = ({ onNavigateBack
   const uploadFiles = async (files: FileList | null) => {
     if (!files || activeCategoryId === 'all') return;
 
-    const newProducts: RegisteredProduct[] = [...products];
+    const newUploadedProducts: RegisteredProduct[] = [];
     for (const file of Array.from(files)) {
       try {
-        const { src } = await processFile(file);
-        newProducts.push({ id: `${Date.now()}-${Math.random()}`, src, categoryId: activeCategoryId });
+        // Create a storage reference
+        const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
+        
+        // Upload file
+        await uploadBytes(storageRef, file);
+
+        // Get download URL
+        const downloadURL = await getDownloadURL(storageRef);
+
+        // Add product to Firestore
+        const docRef = await addDoc(collection(db, 'products'), {
+          src: downloadURL,
+          categoryId: activeCategoryId,
+        });
+
+        newUploadedProducts.push({ id: docRef.id, src: downloadURL, categoryId: activeCategoryId });
+
       } catch (error) {
-        console.error("Error processing file:", file.name, error);
+        console.error("Error uploading file:", file.name, error);
       }
     }
-    saveProducts(newProducts);
+    setProducts([...products, ...newUploadedProducts]);
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,9 +108,31 @@ const DatabasePage: React.FC<{ onNavigateBack: () => void }> = ({ onNavigateBack
     }
   };
 
-  const handleDeleteProduct = (id: string) => {
-    const newProducts = products.filter(p => p.id !== id);
-    saveProducts(newProducts);
+  const handleDeleteProduct = async (id: string) => {
+    const productToDelete = products.find(p => p.id === id);
+    if (!productToDelete) return;
+
+    try {
+      // Delete image from storage
+      const imageRef = ref(storage, productToDelete.src);
+      await deleteObject(imageRef);
+
+      // Delete product from firestore
+      await deleteDoc(doc(db, "products", id));
+
+      // Update state
+      const newProducts = products.filter(p => p.id !== id);
+      setProducts(newProducts);
+    } catch (error) {
+      if (error.code === 'storage/object-not-found') {
+        console.warn("Image not found in storage, but deleting from Firestore anyway.");
+        await deleteDoc(doc(db, "products", id));
+        const newProducts = products.filter(p => p.id !== id);
+        setProducts(newProducts);
+      } else {
+        console.error("Error deleting product: ", error);
+      }
+    }
   };
 
   const handleDrop = async (event: React.DragEvent<HTMLLabelElement>) => {

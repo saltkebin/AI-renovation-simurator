@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
 import RenovationPanel from './components/RenovationPanel';
@@ -11,12 +11,12 @@ import ErrorDisplay from './components/ErrorDisplay';
 import ConfirmationModal from './components/ConfirmationModal';
 import DatabasePage from './components/DatabasePage';
 import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts } from './services/geminiService';
-// FIX: Import AppMode from types.ts.
-import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode } from './types';
+import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory } from './types';
 import { RENOVATION_PROMPTS, OMAKASE_PROMPT } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
+import { db } from './services/firebase';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 
-// FIX: AppMode is now a shared type defined in types.ts.
 type AppView = 'main' | 'database';
 
 interface ModalInfo {
@@ -46,7 +46,43 @@ const App: React.FC = () => {
   const [appMode, setAppMode] = useState<AppMode>('renovation');
   const [appView, setAppView] = useState<AppView>('main');
   const [modalInfo, setModalInfo] = useState<ModalInfo | null>(null);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [products, setProducts] = useState<RegisteredProduct[]>([]);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch Categories
+        const categoriesCollection = collection(db, 'categories');
+        const categorySnapshot = await getDocs(categoriesCollection);
+        if (categorySnapshot.empty) {
+          // Create default categories if none exist
+          const defaultCategories = [{ name: '壁紙' }, { name: '家具' }];
+          const newCategories: ProductCategory[] = [];
+          for (const cat of defaultCategories) {
+            const docRef = await addDoc(categoriesCollection, cat);
+            newCategories.push({ id: docRef.id, ...cat });
+          }
+          setCategories(newCategories);
+        } else {
+          const categoriesList = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProductCategory));
+          setCategories(categoriesList);
+        }
+
+        // Fetch Products
+        const productsCollection = collection(db, 'products');
+        const productSnapshot = await getDocs(productsCollection);
+        const productsList = productSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RegisteredProduct));
+        setProducts(productsList);
+
+      } catch (e) {
+        console.error("Failed to load data from Firestore", e);
+        setError("商品データベースの読み込みに失敗しました。");
+      } 
+    };
+
+    fetchData();
+  }, []);
 
   const resetState = () => {
     setOriginalImage(null);
@@ -541,9 +577,7 @@ const App: React.FC = () => {
       <button 
         onClick={() => handleAppModeChange('renovation')}
         disabled={isLoading}
-        className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all w-1/2 justify-center ${
-          appMode === 'renovation' ? 'bg-white text-gray-800 shadow-md' : 'bg-transparent text-gray-500'
-        } disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all w-1/2 justify-center ${appMode === 'renovation' ? 'bg-white text-gray-800 shadow-md' : 'bg-transparent text-gray-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         <PaintBrushIcon className="w-5 h-5" />
         リノベーション
@@ -551,9 +585,7 @@ const App: React.FC = () => {
       <button
         onClick={() => handleAppModeChange('sketch2arch')}
         disabled={isLoading}
-        className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all w-1/2 justify-center ${
-          appMode === 'sketch2arch' ? 'bg-white text-gray-800 shadow-md' : 'bg-transparent text-gray-500'
-        } disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all w-1/2 justify-center ${appMode === 'sketch2arch' ? 'bg-white text-gray-800 shadow-md' : 'bg-transparent text-gray-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         <PencilIcon className="w-5 h-5" />
         スケッチ → パース
@@ -562,7 +594,13 @@ const App: React.FC = () => {
   );
 
   if (appView === 'database') {
-    return <DatabasePage onNavigateBack={() => setAppView('main')} />;
+    return <DatabasePage 
+            onNavigateBack={() => setAppView('main')} 
+            categories={categories}
+            products={products}
+            setCategories={setCategories}
+            setProducts={setProducts}
+          />;
   }
 
   return (
@@ -607,6 +645,8 @@ const App: React.FC = () => {
                       mimeType={mimeType}
                       isFinetuningMode={isFinetuningMode}
                       onExitFinetuning={() => setIsFinetuningMode(false)}
+                      categories={categories}
+                      products={products}
                     />
                   </>
                 )}
