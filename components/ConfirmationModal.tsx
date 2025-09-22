@@ -1,0 +1,64 @@
+
+import React from 'react';
+
+interface ConfirmationModalProps {
+  isOpen: boolean;
+  title: string;
+  message: string | React.ReactNode;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  confirmButtonColor?: 'red' | 'indigo';
+  hideCancelButton?: boolean;
+}
+
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = 'OK',
+  cancelText = 'キャンセル',
+  confirmButtonColor = 'indigo',
+  hideCancelButton = false,
+}) => {
+  if (!isOpen) {
+    return null;
+  }
+
+  const confirmColorClasses = {
+    red: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+    indigo: 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500',
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
+      <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full" role="document">
+        <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+        <div className="mt-2 text-sm text-gray-600">
+          {message}
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          {!hideCancelButton && onCancel && (
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 text-sm font-semibold bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+            >
+              {cancelText}
+            </button>
+          )}
+          <button
+            onClick={onConfirm}
+            className={`px-4 py-2 text-sm font-semibold text-white rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${confirmColorClasses[confirmButtonColor]}`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ConfirmationModal;

@@ -1,0 +1,7 @@
+{
+  "name": "(データ登録可能版)AIリノベーション・シミュレーター(マスター)",
+  "description": "自社商品の壁紙などを登録できる機能搭載型(ローカル)",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
