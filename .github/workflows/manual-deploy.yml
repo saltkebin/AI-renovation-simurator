@@ -34,6 +34,10 @@ jobs:
       - name: Parse Firebase Config
         id: get_firebase_config
         run: |
+          if [ -z "${{ inputs.client }}" ]; then
+            echo "Client name is required. This workflow must be run manually with client parameter." >&2
+            exit 1
+          fi
           CLIENT_UPPER=$(echo "${{ inputs.client }}" | tr 'a-z' 'A-Z')
           CONFIG_JSON='${{ secrets[format('FIREBASE_CONFIG_{0}', CLIENT_UPPER)] }}'
           if [ -z "$CONFIG_JSON" ]; then
