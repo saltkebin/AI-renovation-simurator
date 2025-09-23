@@ -1,0 +1,68 @@
+# ワークフローの名前。これがActionsタブのサイドバーに表示されます。
+name: Manual Deploy to Client
+
+# このワークフローを起動するきっかけ（トリガー）
+on:
+  # workflow_dispatch を使うと、Actionsタブに「Run workflow」ボタンが表示されるようになります。
+  workflow_dispatch:
+    # デプロイ時に必要な情報を入力するフィールドを定義します。
+    inputs:
+      client_name:
+        description: 'デプロイ対象のクライアント名 (例: hitotoiro)'
+        required: true
+        type: string
+
+# 実行される一連の作業（ジョブ）
+jobs:
+  build_and_deploy: # ジョブ名を変更
+    # 最新のUbuntu環境で実行します。
+    runs-on: ubuntu-latest
+
+    # ジョブ内のステップ
+    steps:
+      # 1. リポジトリのソースコードをチェックアウトします。
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Node.js環境をセットアップします。バージョンはあなたのアプリに合わせてください。
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3. Firebase Configをパースして環境変数に設定
+      - name: Parse Firebase Config
+        id: get_firebase_config
+        run: |
+          CLIENT_UPPER=$(echo "${{ inputs.client_name }}" | tr 'a-z' 'A-Z')
+          CONFIG_JSON='${{ secrets[format('FIREBASE_CONFIG_{0}', CLIENT_UPPER)] }}'
+          if [ -z "$CONFIG_JSON" ]; then
+            echo "Firebase config secret not found for client: ${{ inputs.client_name }}" >&2
+            exit 1
+          fi
+          echo "VITE_FIREBASE_API_KEY=$(echo $CONFIG_JSON | jq -r .apiKey)" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_AUTH_DOMAIN=$(echo $CONFIG_JSON | jq -r .authDomain)" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_PROJECT_ID=$(echo $CONFIG_JSON | jq -r .projectId)" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_STORAGE_BUCKET=$(echo $CONFIG_JSON | jq -r .storageBucket)" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(echo $CONFIG_JSON | jq -r .messagingSenderId)" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_APP_ID=$(echo $CONFIG_JSON | jq -r .appId)" >> $GITHUB_ENV
+          echo "FIREBASE_PROJECT_ID=$(echo $CONFIG_JSON | jq -r .projectId)" >> $GITHUB_ENV # Deploy to Firebase Hostingで使用
+
+      # 4. 必要なパッケージをインストールします。
+      - name: Install dependencies
+        run: npm install
+
+      # 5. アプリをビルドします。
+      - name: Build application
+        run: npm run build
+        env:
+          VITE_GEMINI_API_KEY: ${{ secrets[format('GEMINI_API_KEY_{0}', upper(inputs.client_name))] }}
+
+      # 6. Firebase Hostingなどにデプロイします。
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets[format('FIREBASE_SERVICE_ACCOUNT_{0}', upper(inputs.client_name))] }}'
+          channelId: live
+          projectId: ${{ env.FIREBASE_PROJECT_ID }} # Parse Firebase Configで設定した環境変数を使用
