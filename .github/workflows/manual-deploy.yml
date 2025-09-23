@@ -33,18 +33,14 @@ jobs:
             sudo apt-get install -y jq
           fi
 
-      - name: Export secrets and parse Firebase Config
-        id: export_and_parse
+      - name: Set client environment variables
+        id: set_env
         run: |
           CLIENT="${{ github.event.inputs.client }}"
           echo "Selected client: $CLIENT"
+          echo "CLIENT_NAME=$CLIENT" >> $GITHUB_ENV
 
           if [ "$CLIENT" = "hitotoiro" ]; then
-            # Export Service Account
-            echo "FIREBASE_SERVICE_ACCOUNT_JSON<<EOF" >> $GITHUB_ENV
-            echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_HITOTOIRO }}" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-
             # Export Gemini API Key
             echo "VITE_GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_HITOTOIRO }}" >> $GITHUB_ENV
 
@@ -56,11 +52,6 @@ jobs:
             echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(echo '${{ secrets.FIREBASE_CONFIG_HITOTOIRO }}' | jq -r '.messagingSenderId')" >> $GITHUB_ENV
             echo "VITE_FIREBASE_APP_ID=$(echo '${{ secrets.FIREBASE_CONFIG_HITOTOIRO }}' | jq -r '.appId')" >> $GITHUB_ENV
           else
-            # Export Service Account
-            echo "FIREBASE_SERVICE_ACCOUNT_JSON<<EOF" >> $GITHUB_ENV
-            echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEFAULT }}" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-
             # Export Gemini API Key
             echo "VITE_GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_DEFAULT }}" >> $GITHUB_ENV
 
@@ -108,11 +99,20 @@ jobs:
           echo "Generated .firebaserc with project: $PROJECT_ID"
           cat .firebaserc
 
-      - name: Deploy to Firebase Hosting
-        # FirebaseExtended/action-hosting-deploy expects service account json content
+      - name: Deploy to Firebase Hosting (HITOTOIRO)
+        if: env.CLIENT_NAME == 'hitotoiro'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_HITOTOIRO }}'
+          channelId: live
+          projectId: ${{ env.VITE_FIREBASE_PROJECT_ID }}
+
+      - name: Deploy to Firebase Hosting (DEFAULT)
+        if: env.CLIENT_NAME != 'hitotoiro'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEFAULT }}'
           channelId: live
           projectId: ${{ env.VITE_FIREBASE_PROJECT_ID }}
