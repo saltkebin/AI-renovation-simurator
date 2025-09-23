@@ -64,6 +64,17 @@ jobs:
       - name: Parse Firebase Config
         id: parse_config
         run: |
+          echo "=== Parse Firebase Config Debug ==="
+          echo "FIREBASE_CONFIG_JSON content:"
+          echo "$FIREBASE_CONFIG_JSON"
+          echo "=========================="
+
+          # Validate JSON format
+          if ! echo "$FIREBASE_CONFIG_JSON" | jq empty; then
+            echo "ERROR: Invalid JSON format in FIREBASE_CONFIG_JSON" >&2
+            exit 1
+          fi
+
           # Parse Firebase config JSON into env vars
           echo "VITE_FIREBASE_API_KEY=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.apiKey')" >> $GITHUB_ENV
           echo "VITE_FIREBASE_AUTH_DOMAIN=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.authDomain')" >> $GITHUB_ENV
@@ -71,6 +82,8 @@ jobs:
           echo "VITE_FIREBASE_STORAGE_BUCKET=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.storageBucket')" >> $GITHUB_ENV
           echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.messagingSenderId')" >> $GITHUB_ENV
           echo "VITE_FIREBASE_APP_ID=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.appId')" >> $GITHUB_ENV
+
+          echo "Parsed Firebase environment variables successfully"
 
       - name: Install dependencies
         run: npm install
