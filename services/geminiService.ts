@@ -3,11 +3,11 @@ import { GoogleGenAI, Modality, Type } from "@google/genai";
 import type { QuotationResult, RegisteredProduct } from '../types';
 
 
-if (!process.env.API_KEY) {
-  console.error("API_KEY environment variable not set.");
+if (!import.meta.env.VITE_GEMINI_API_KEY) {
+  console.error("VITE_GEMINI_API_KEY environment variable not set.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY! });
 
 interface RenovationResult {
   image: string | null;
