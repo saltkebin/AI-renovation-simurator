@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
@@ -35,6 +34,7 @@ const App: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [activeGeneratedImage, setActiveGeneratedImage] = useState<GeneratedImage | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true); // For initial data load
   const [error, setError] = useState<string | null>(null);
   const [mimeType, setMimeType] = useState<string>('');
   const [isFinetuningMode, setIsFinetuningMode] = useState<boolean>(false);
@@ -77,8 +77,10 @@ const App: React.FC = () => {
 
       } catch (e) {
         console.error("Failed to load data from Firestore", e);
-        setError("商品データベースの読み込みに失敗しました。");
-      } 
+        setError("商品データベースの読み込みに失敗しました。ページをリロードして再度お試しください。");
+      } finally {
+        setIsInitialLoading(false);
+      }
     };
 
     fetchData();
@@ -265,9 +267,6 @@ const App: React.FC = () => {
         };
         setGeneratedImages(prevImages => [newImage, ...prevImages].slice(0, 20));
         setActiveGeneratedImage(newImage);
-        
-      } else if (result.text && appMode === 'renovation') {
-        console.log("AIからのテキスト応答:", result.text);
       }
     } catch (err) {
       console.error(err);
@@ -592,6 +591,10 @@ const App: React.FC = () => {
       </button>
     </div>
   );
+
+  if (isInitialLoading) {
+    return <Loader messages={["アプリを起動中..."]} />;
+  }
 
   if (appView === 'database') {
     return <DatabasePage 

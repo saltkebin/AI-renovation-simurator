@@ -4,6 +4,7 @@ import { UploadIcon, TrashIcon, ArrowUturnLeftIcon, PlusCircleIcon, CubeIcon } f
 import { db, storage } from '../services/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import ConfirmationModal from './ConfirmationModal'; // Import the modal component
 
 interface DatabasePageProps {
   onNavigateBack: () => void;
@@ -11,6 +12,17 @@ interface DatabasePageProps {
   products: RegisteredProduct[];
   setCategories: React.Dispatch<React.SetStateAction<ProductCategory[]>>;
   setProducts: React.Dispatch<React.SetStateAction<RegisteredProduct[]>>;
+}
+
+// Modal info state type (similar to App.tsx)
+interface ModalInfo {
+  title: string;
+  message: string | React.ReactNode;
+  confirmText: string;
+  onConfirm: () => void;
+  cancelText?: string;
+  onCancel?: () => void;
+  confirmButtonColor?: 'red' | 'indigo';
 }
 
 const DatabasePage: React.FC<DatabasePageProps> = ({ 
@@ -22,6 +34,7 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
 }) => {
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [modalInfo, setModalInfo] = useState<ModalInfo | null>(null); // State for the modal
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputId = useId();
 
@@ -34,32 +47,38 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
       setNewCategoryName('');
     } catch (e) {
       console.error("Error adding category: ", e);
+      // Optionally, show an error modal
+      setModalInfo({
+        title: 'エラー',
+        message: 'カテゴリーの追加に失敗しました。',
+        confirmText: 'OK',
+        onConfirm: () => setModalInfo(null)
+      });
     }
   };
   
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (window.confirm('このカテゴリーを削除しますか？カテゴリー内のすべての商品も削除されます。')) {
+  const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+    const performDelete = async () => {
       try {
-        // Delete all products in the category from Firestore and Storage
+        // Delete all products in the category
         const q = query(collection(db, "products"), where("categoryId", "==", categoryId));
         const querySnapshot = await getDocs(q);
         const deletePromises: Promise<void>[] = [];
         querySnapshot.forEach((docSnapshot) => {
-          const product = { id: docSnapshot.id, ...docSnapshot.data() } as RegisteredProduct;
-          // Delete image from storage
-          const imageRef = ref(storage, product.src);
-          deletePromises.push(deleteObject(imageRef));
-          // Delete product document from firestore
-          deletePromises.push(deleteDoc(doc(db, "products", product.id)));
+          const product = docSnapshot.data() as Omit<RegisteredProduct, 'id'>;
+          if (product.src) {
+            const imageRef = ref(storage, product.src);
+            deletePromises.push(deleteObject(imageRef).catch(err => console.warn("Image delete failed, might not exist:", err)));
+          }
+          deletePromises.push(deleteDoc(doc(db, "products", docSnapshot.id)));
         });
         await Promise.all(deletePromises);
 
-        // Delete the category
+        // Delete the category itself
         await deleteDoc(doc(db, "categories", categoryId));
 
         // Update state
-        const newCategories = categories.filter(c => c.id !== categoryId);
-        setCategories(newCategories);
+        setCategories(categories.filter(c => c.id !== categoryId));
         setProducts(products.filter(p => p.categoryId !== categoryId));
 
         if(activeCategoryId === categoryId) {
@@ -67,8 +86,28 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
         }
       } catch (e) {
         console.error("Error deleting category: ", e);
+        setModalInfo({
+          title: 'エラー',
+          message: 'カテゴリーの削除に失敗しました。',
+          confirmText: 'OK',
+          onConfirm: () => setModalInfo(null)
+        });
       }
-    }
+    };
+
+    // Set modal info to ask for confirmation
+    setModalInfo({
+      title: 'カテゴリーの削除',
+      message: `カテゴリー「${categoryName}」を削除しますか？カテゴリー内のすべての商品も削除されます。この操作は取り消せません。`,
+      confirmText: '削除する',
+      confirmButtonColor: 'red',
+      onConfirm: () => {
+        performDelete();
+        setModalInfo(null);
+      },
+      cancelText: 'キャンセル',
+      onCancel: () => setModalInfo(null)
+    });
   };
 
   const uploadFiles = async (files: FileList | null) => {
@@ -77,23 +116,14 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
     const newUploadedProducts: RegisteredProduct[] = [];
     for (const file of Array.from(files)) {
       try {
-        // Create a storage reference
         const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
-        
-        // Upload file
         await uploadBytes(storageRef, file);
-
-        // Get download URL
         const downloadURL = await getDownloadURL(storageRef);
-
-        // Add product to Firestore
         const docRef = await addDoc(collection(db, 'products'), {
           src: downloadURL,
           categoryId: activeCategoryId,
         });
-
         newUploadedProducts.push({ id: docRef.id, src: downloadURL, categoryId: activeCategoryId });
-
       } catch (error) {
         console.error("Error uploading file:", file.name, error);
       }
@@ -113,22 +143,15 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
     if (!productToDelete) return;
 
     try {
-      // Delete image from storage
       const imageRef = ref(storage, productToDelete.src);
       await deleteObject(imageRef);
-
-      // Delete product from firestore
       await deleteDoc(doc(db, "products", id));
-
-      // Update state
-      const newProducts = products.filter(p => p.id !== id);
-      setProducts(newProducts);
+      setProducts(products.filter(p => p.id !== id));
     } catch (error) {
       if (error.code === 'storage/object-not-found') {
         console.warn("Image not found in storage, but deleting from Firestore anyway.");
         await deleteDoc(doc(db, "products", id));
-        const newProducts = products.filter(p => p.id !== id);
-        setProducts(newProducts);
+        setProducts(products.filter(p => p.id !== id));
       } else {
         console.error("Error deleting product: ", error);
       }
@@ -164,7 +187,6 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
         </header>
         <main className="container mx-auto p-4 md:p-8">
           <div className="flex flex-col md:flex-row gap-8">
-            {/* Sidebar for categories */}
             <div className="md:w-1/4 lg:w-1/5">
               <div className="bg-white rounded-xl shadow-lg p-4 sticky top-24">
                 <h2 className="text-lg font-bold text-gray-800 mb-3">カテゴリー</h2>
@@ -185,7 +207,7 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
                         className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors flex justify-between items-center group ${activeCategoryId === category.id ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}
                       >
                         <span className="truncate">{category.name}</span>
-                        <TrashIcon onClick={(e) => { e.stopPropagation(); handleDeleteCategory(category.id); }} className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity" />
+                        <TrashIcon onClick={(e) => { e.stopPropagation(); handleDeleteCategory(category.id, category.name); }} className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity" />
                       </button>
                     </li>
                   ))}
@@ -208,7 +230,6 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
               </div>
             </div>
 
-            {/* Main content for products */}
             <div className="flex-1">
               <div className="bg-white rounded-xl shadow-lg p-6">
                   <h2 className="text-xl font-bold text-gray-700 mb-4">
@@ -274,6 +295,17 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
             </div>
           </div>
         </main>
+        {modalInfo && (
+            <ConfirmationModal
+              isOpen={!!modalInfo}
+              title={modalInfo.title}
+              message={modalInfo.message}
+              confirmText={modalInfo.confirmText}
+              onConfirm={modalInfo.onConfirm}
+              onCancel={modalInfo.onCancel || (() => setModalInfo(null))}
+              confirmButtonColor={modalInfo.confirmButtonColor}
+            />
+        )}
     </div>
   );
 };
