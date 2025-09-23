@@ -40,7 +40,16 @@
 4.  **Cloud Firestore のロケーション** を選択します。日本のクライアントであれば `asia-northeast1 (Tokyo)` が推奨されます。
 5.  「**有効にする**」をクリックします。
 
-### ステップ3: Firebase Hostingの有効化
+### ステップ3: Cloud Storageの有効化
+
+アプリケーションで画像などのファイルを保存するために、Cloud Storageを有効化します。
+
+1.  作成したプロジェクトのダッシュボードで、左側メニューから **ビルド** > **Storage** を選択します。
+2.  「**始める**」ボタンをクリックします。
+3.  セキュリティルールについて尋ねられますが、デフォルトのルール（テストモード）で進めても構いません。後で必要に応じて変更できます。
+4.  Cloud Storage のロケーションを選択し、「**完了**」をクリックします。
+
+### ステップ4: Firebase Hostingの有効化
 
 アプリケーションをデプロイするために、Hostingサービスを有効化します。
 
@@ -48,7 +57,7 @@
 2.  「**始める**」ボタンをクリックします。
 3.  画面にCLI（コマンド）のインストール手順などが表示されますが、デプロイはGitHub Actionsで行うため、これらはすべて無視して「**次へ**」「**次へ**」「**コンソールに進む**」とクリックしてウィザードを完了させてください。
 
-### ステップ4: Webアプリを登録し、`FIREBASE_CONFIG` を取得
+### ステップ5: Webアプリを登録し、`FIREBASE_CONFIG` を取得
 
 デプロイするWebアプリケーションをプロジェクトに登録し、接続設定情報を取得します。これはGitHubのSecret `FIREBASE_CONFIG_[CLIENT_NAME]` の値になります。
 
@@ -70,7 +79,7 @@
     ```
 7.  この **`{ ... }` の中身（波括弧自体も含む）をすべてコピー**してください。これが **`FIREBASE_CONFIG_[CLIENT_NAME]`** の値になります。
 
-### ステップ5: サービスアカウントの秘密鍵 (`FIREBASE_SERVICE_ACCOUNT`) を取得
+### ステップ6: サービスアカウントの秘密鍵 (`FIREBASE_SERVICE_ACCOUNT`) を取得
 
 GitHub ActionsがFirebaseにデプロイするための認証キーを取得します。これはGitHubのSecret `FIREBASE_SERVICE_ACCOUNT_[CLIENT_NAME]` の値になります。
 
@@ -80,6 +89,16 @@ GitHub ActionsがFirebaseにデプロイするための認証キーを取得し�
 4.  `[プロジェクト名]-firebase-adminsdk-....json` という名前のJSONファイルが自動的にダウンロードされます。
 5.  この**ダウンロードされたファイルの中身をすべて**コピーしてください。これが **`FIREBASE_SERVICE_ACCOUNT_[CLIENT_NAME]`** の値になります。
 
+### ステップ7: PINコードの設定
+
+アプリケーションの認証に使用するPINコードをFirestoreに設定します。各クライアントごとに異なるPINコードを設定できます。
+
+1.  作成したプロジェクトのダッシュボードで、左側メニューから **ビルド** > **Firestore Database** を選択します。
+2.  「**データ**」タブに移動します。
+3.  新しいコレクション「`config`」を作成します。
+4.  `config`コレクション内に新しいドキュメント「`auth`」を作成します。
+5.  `auth`ドキュメント内にフィールド「`pin`」（型: `string`）を追加し、希望する6桁のPINコード（例: `"123456"`）を設定します。
+
 ---
 
 ## 次のステップ
@@ -88,7 +107,7 @@ GitHub ActionsがFirebaseにデプロイするための認証キーを取得し�
 
 この後、今回取得した以下の2つの情報と、クライアント用の**Gemini APIキー**を使って、GitHubリポジトリの **Settings > Secrets and variables > Actions** に、対応する名前で3つのSecretを登録してください。
 
-1.  **`FIREBASE_CONFIG_[CLIENT_NAME]`** (ステップ4で取得)
-2.  **`FIREBASE_SERVICE_ACCOUNT_[CLIENT_NAME]`** (ステップ5で取得)
+1.  **`FIREBASE_CONFIG_[CLIENT_NAME]`** (ステップ5で取得)
+2.  **`FIREBASE_SERVICE_ACCOUNT_[CLIENT_NAME]`** (ステップ6で取得)
 3.  **`GEMINI_API_KEY_[CLIENT_NAME]`** (クライアント用に用意したGemini APIキー)
 

@@ -17,6 +17,7 @@ on:
         type: choice
         options:
           - default
+          - hitotoiro
           # Add new client names here
 
 jobs:
