@@ -40,14 +40,20 @@ jobs:
           echo "Selected client: $CLIENT"
 
           if [ "$CLIENT" = "hitotoiro" ]; then
-            FIREBASE_CONFIG='${{ secrets.FIREBASE_CONFIG_HITOTOIRO }}'
-            GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY_HITOTOIRO }}'
-            FIREBASE_SA='${{ secrets.FIREBASE_SERVICE_ACCOUNT_HITOTOIRO }}'
+            FIREBASE_CONFIG="${{ secrets.FIREBASE_CONFIG_HITOTOIRO }}"
+            GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY_HITOTOIRO }}"
+            FIREBASE_SA="${{ secrets.FIREBASE_SERVICE_ACCOUNT_HITOTOIRO }}"
           else
             # default fallback - adjust secret names as you have them
-            FIREBASE_CONFIG='${{ secrets.FIREBASE_CONFIG_DEFAULT }}'
-            GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY_DEFAULT }}'
-            FIREBASE_SA='${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEFAULT }}'
+            FIREBASE_CONFIG="${{ secrets.FIREBASE_CONFIG_DEFAULT }}"
+            GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY_DEFAULT }}"
+            FIREBASE_SA="${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEFAULT }}"
+          fi
+
+          # Check if Firebase config is empty first
+          if [ -z "$FIREBASE_CONFIG" ]; then
+            echo "Firebase config for client [$CLIENT] is empty" >&2
+            exit 1
           fi
 
           # export to GITHUB_ENV so subsequent steps can use them
@@ -57,17 +63,12 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
           # Parse Firebase config JSON into env vars
-          if [ -z "$FIREBASE_CONFIG" ]; then
-            echo "Firebase config for client [$CLIENT] is empty" >&2
-            exit 1
-          fi
-
-          echo "VITE_FIREBASE_API_KEY=$(echo "$FIREBASE_CONFIG" | jq -r '.apiKey')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_AUTH_DOMAIN=$(echo "$FIREBASE_CONFIG" | jq -r '.authDomain')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_PROJECT_ID=$(echo "$FIREBASE_CONFIG" | jq -r '.projectId')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_STORAGE_BUCKET=$(echo "$FIREBASE_CONFIG" | jq -r '.storageBucket')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(echo "$FIREBASE_CONFIG" | jq -r '.messagingSenderId')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_APP_ID=$(echo "$FIREBASE_CONFIG" | jq -r '.appId')" >> $GITHUB_ENV
+          echo "$FIREBASE_CONFIG" | jq -r '.apiKey' | sed -e 's/^/VITE_FIREBASE_API_KEY=/' >> $GITHUB_ENV
+          echo "$FIREBASE_CONFIG" | jq -r '.authDomain' | sed -e 's/^/VITE_FIREBASE_AUTH_DOMAIN=/' >> $GITHUB_ENV
+          echo "$FIREBASE_CONFIG" | jq -r '.projectId' | sed -e 's/^/VITE_FIREBASE_PROJECT_ID=/' >> $GITHUB_ENV
+          echo "$FIREBASE_CONFIG" | jq -r '.storageBucket' | sed -e 's/^/VITE_FIREBASE_STORAGE_BUCKET=/' >> $GITHUB_ENV
+          echo "$FIREBASE_CONFIG" | jq -r '.messagingSenderId' | sed -e 's/^/VITE_FIREBASE_MESSAGING_SENDER_ID=/' >> $GITHUB_ENV
+          echo "$FIREBASE_CONFIG" | jq -r '.appId' | sed -e 's/^/VITE_FIREBASE_APP_ID=/' >> $GITHUB_ENV
 
       - name: Install dependencies
         run: npm install
