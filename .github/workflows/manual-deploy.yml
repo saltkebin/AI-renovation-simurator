@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     # デプロイ時に必要な情報を入力するフィールドを定義します。
     inputs:
-      client_name:
+      client:
         description: 'デプロイ対象のクライアント名 (例: hitotoiro)'
         required: true
         type: string
@@ -34,10 +34,10 @@ jobs:
       - name: Parse Firebase Config
         id: get_firebase_config
         run: |
-          CLIENT_UPPER=$(echo "${{ inputs.client_name }}" | tr 'a-z' 'A-Z')
+          CLIENT_UPPER=$(echo "${{ inputs.client }}" | tr 'a-z' 'A-Z')
           CONFIG_JSON='${{ secrets[format('FIREBASE_CONFIG_{0}', CLIENT_UPPER)] }}'
           if [ -z "$CONFIG_JSON" ]; then
-            echo "Firebase config secret not found for client: ${{ inputs.client_name }}" >&2
+            echo "Firebase config secret not found for client: ${{ inputs.client }}" >&2
             exit 1
           fi
           echo "VITE_FIREBASE_API_KEY=$(echo $CONFIG_JSON | jq -r .apiKey)" >> $GITHUB_ENV
@@ -56,13 +56,13 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          VITE_GEMINI_API_KEY: ${{ secrets[format('GEMINI_API_KEY_{0}', upper(inputs.client_name))] }}
+          VITE_GEMINI_API_KEY: ${{ secrets[format('GEMINI_API_KEY_{0}', upper(inputs.client))] }}
 
       # 6. Firebase Hostingなどにデプロイします。
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets[format('FIREBASE_SERVICE_ACCOUNT_{0}', upper(inputs.client_name))] }}'
+          firebaseServiceAccount: '${{ secrets[format('FIREBASE_SERVICE_ACCOUNT_{0}', upper(inputs.client))] }}'
           channelId: live
           projectId: ${{ env.FIREBASE_PROJECT_ID }} # Parse Firebase Configで設定した環境変数を使用
