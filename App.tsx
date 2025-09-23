@@ -756,7 +756,7 @@ const App: React.FC = () => {
              <div className="text-center mt-6 flex justify-center items-center gap-4 flex-wrap">
               {!isFinetuningMode && !isQuotationMode && (
                 <>
-                  <button 
+                  <button
                     onClick={() => setIsFinetuningMode(true)}
                     className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
@@ -773,6 +773,15 @@ const App: React.FC = () => {
                     </button>
                   )}
                 </>
+              )}
+              {isFinetuningMode && !isQuotationMode && appMode === 'renovation' && (
+                <button
+                  onClick={handleEnterQuotationMode}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                >
+                  <CalculatorIcon className="w-5 h-5" />
+                  この画像で見積もりに移る
+                </button>
               )}
                <button
                 onClick={handleDownload}

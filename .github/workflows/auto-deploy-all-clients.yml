@@ -1,28 +1,25 @@
-# This workflow enables manual deployments to different client environments.
+# This workflow automatically deploys to ALL client environments when code is pushed to main.
 # To add a new client (e.g., 'newclient'), you need to:
-# 1. Add 'newclient' to the 'options' list under 'inputs.client'.
+# 1. Add 'newclient' to the 'clients' array in the matrix strategy below.
 # 2. Create the following secrets in your GitHub repository settings:
 #    - FIREBASE_SERVICE_ACCOUNT_NEWCLIENT
 #    - GEMINI_API_KEY_NEWCLIENT
 #    - FIREBASE_CONFIG_NEWCLIENT
 
-name: Manual Deploy to Client
+name: Auto Deploy to All Clients
 
 on:
-  workflow_dispatch:
-    inputs:
-      client:
-        description: 'Client to deploy to'
-        required: true
-        type: choice
-        options:
-          - default
-          - hitotoiro
-          # Add new client names here
+  push:
+    branches: [ main ]
 
 jobs:
-  build_and_deploy:
+  deploy-all:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        client: [default, hitotoiro] # Add new client names here
+      fail-fast: false # Continue deploying to other clients even if one fails
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,13 +38,17 @@ jobs:
 
       - name: Set client environment variables
         run: |
-          CLIENT="${{ github.event.inputs.client }}"
+          CLIENT="${{ matrix.client }}"
           CLIENT_UPPER=$(echo "$CLIENT" | tr 'a-z' 'A-Z')
           echo "Selected client: $CLIENT"
           echo "CLIENT_NAME=$CLIENT" >> $GITHUB_ENV
           echo "CLIENT_UPPER=$CLIENT_UPPER" >> $GITHUB_ENV
 
-          echo "Using client: $CLIENT (uppercase: $CLIENT_UPPER)"
+          # Get secrets dynamically based on client name
+          GEMINI_SECRET_NAME="GEMINI_API_KEY_$CLIENT_UPPER"
+          FIREBASE_CONFIG_SECRET_NAME="FIREBASE_CONFIG_$CLIENT_UPPER"
+
+          echo "Using secrets: $GEMINI_SECRET_NAME, $FIREBASE_CONFIG_SECRET_NAME"
 
       - name: Parse Firebase Config
         run: |
@@ -61,18 +62,18 @@ jobs:
             CONFIG_JSON='${{ secrets.FIREBASE_CONFIG_HITOTOIRO }}'
             GEMINI_KEY='${{ secrets.GEMINI_API_KEY_HITOTOIRO }}'
           else
-            echo "ERROR: Unknown client ${{ github.event.inputs.client }}. Please add configuration for this client." >&2
+            echo "ERROR: Unknown client ${{ matrix.client }}. Please add configuration for this client." >&2
             exit 1
           fi
 
           if [ -z "$CONFIG_JSON" ] || [ "$CONFIG_JSON" = "null" ]; then
-            echo "ERROR: Firebase config secret not found for client: ${{ github.event.inputs.client }}" >&2
+            echo "ERROR: Firebase config secret not found for client: ${{ matrix.client }}" >&2
             echo "Expected secret name: FIREBASE_CONFIG_$CLIENT_UPPER" >&2
             exit 1
           fi
 
           if [ -z "$GEMINI_KEY" ] || [ "$GEMINI_KEY" = "null" ]; then
-            echo "ERROR: Gemini API key secret not found for client: ${{ github.event.inputs.client }}" >&2
+            echo "ERROR: Gemini API key secret not found for client: ${{ matrix.client }}" >&2
             echo "Expected secret name: GEMINI_API_KEY_$CLIENT_UPPER" >&2
             exit 1
           fi
@@ -87,7 +88,7 @@ jobs:
           echo "VITE_FIREBASE_APP_ID=$(echo $CONFIG_JSON | jq -r .appId)" >> $GITHUB_ENV
           echo "FIREBASE_PROJECT_ID=$(echo $CONFIG_JSON | jq -r .projectId)" >> $GITHUB_ENV
 
-          echo "Parsed Firebase environment variables successfully for client: ${{ github.event.inputs.client }}"
+          echo "Parsed Firebase environment variables successfully for client: ${{ matrix.client }}"
 
       - name: Install dependencies
         run: npm install
@@ -97,16 +98,16 @@ jobs:
 
       - name: Debug environment variables
         run: |
-          echo "=== Environment Variables Debug for ${{ github.event.inputs.client }} ==="
+          echo "=== Environment Variables Debug for ${{ matrix.client }} ==="
           echo "FIREBASE_PROJECT_ID: ${{ env.FIREBASE_PROJECT_ID }}"
           echo "VITE_FIREBASE_PROJECT_ID: ${{ env.VITE_FIREBASE_PROJECT_ID }}"
-          echo "CLIENT: ${{ github.event.inputs.client }}"
+          echo "CLIENT: ${{ matrix.client }}"
 
       - name: Create dynamic .firebaserc for deployment
         run: |
           PROJECT_ID="${{ env.FIREBASE_PROJECT_ID }}"
           if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "null" ]; then
-            echo "ERROR: FIREBASE_PROJECT_ID is empty for client ${{ github.event.inputs.client }}!"
+            echo "ERROR: FIREBASE_PROJECT_ID is empty for client ${{ matrix.client }}!"
             exit 1
           fi
 
@@ -117,7 +118,7 @@ jobs:
             }
           }
           EOF
-          echo "Generated .firebaserc with project: $PROJECT_ID for client: ${{ github.event.inputs.client }}"
+          echo "Generated .firebaserc with project: $PROJECT_ID for client: ${{ matrix.client }}"
           cat .firebaserc
 
       - name: Deploy to Firebase Hosting
@@ -130,5 +131,16 @@ jobs:
 
       - name: Deployment Success Notification
         run: |
-          echo "🎉 Successfully deployed to ${{ github.event.inputs.client }} environment!"
+          echo "🎉 Successfully deployed to ${{ matrix.client }} environment!"
           echo "Project ID: ${{ env.FIREBASE_PROJECT_ID }}"
+
+  deployment-summary:
+    needs: deploy-all
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "=== Deployment Summary ==="
+          echo "All client deployments completed."
+          echo "Check individual job results above for details."
