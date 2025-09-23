@@ -9,11 +9,12 @@ import QuotationPanel from './components/QuotationPanel';
 import ErrorDisplay from './components/ErrorDisplay';
 import ConfirmationModal from './components/ConfirmationModal';
 import DatabasePage from './components/DatabasePage';
+import PinAuth from './components/PinAuth'; // Import the PinAuth component
 import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts } from './services/geminiService';
 import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory } from './types';
 import { RENOVATION_PROMPTS, OMAKASE_PROMPT } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
-import { db } from './services/firebase';
+import { db, verifyPin } from './services/firebase'; // Import verifyPin
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 
 type AppView = 'main' | 'database';
@@ -30,6 +31,7 @@ interface ModalInfo {
 }
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false); // Authentication state
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [activeGeneratedImage, setActiveGeneratedImage] = useState<GeneratedImage | null>(null);
@@ -50,6 +52,8 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<RegisteredProduct[]>([]);
 
   useEffect(() => {
+    if (!isAuthenticated) return; // Don't fetch data if not authenticated
+
     const fetchData = async () => {
       try {
         // Fetch Categories
@@ -84,7 +88,11 @@ const App: React.FC = () => {
     };
 
     fetchData();
-  }, []);
+  }, [isAuthenticated]); // Add isAuthenticated to dependency array
+
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true);
+  };
 
   const resetState = () => {
     setOriginalImage(null);
@@ -271,7 +279,8 @@ const App: React.FC = () => {
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : '画像の生成に失敗しました: 不明なエラーが発生しました。');
-    } finally {
+    }
+    finally {
       setIsLoading(false);
     }
   }, [originalImage, activeGeneratedImage, mimeType, isFinetuningMode, originalImageAspectRatio, appMode]);
@@ -591,6 +600,10 @@ const App: React.FC = () => {
       </button>
     </div>
   );
+
+  if (!isAuthenticated) {
+    return <PinAuth onAuthSuccess={handleAuthSuccess} verifyPin={verifyPin} />;
+  }
 
   if (isInitialLoading) {
     return <Loader messages={["アプリを起動中..."]} />;
