@@ -622,9 +622,148 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 flex flex-col">
       <Header onNavigate={setAppView} />
-      <main className="flex-grow container mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:items-start">
-        <div className="lg:col-span-4 xl:col-span-3">
-          <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' : 'bg-white'}`}>
+      <main className="flex-grow container mx-auto p-4 md:p-8">
+        {/* Mobile: Image area first, then controls */}
+        <div className="lg:hidden">
+          {/* Mobile: Mode selector */}
+          {originalImage && <ModeSelector />}
+
+          {/* Mobile: Image display area */}
+          <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 mb-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' :'bg-white'}`}>
+            {isLoading && <Loader messages={appMode === 'renovation' ? renovationLoadingMessages : sketchLoadingMessages} />}
+            {!isLoading && error && !isQuotationMode && (
+              <ErrorDisplay error={error} />
+            )}
+            {!isLoading && !error && !originalImage && (
+              <div className="text-center text-gray-500">
+                <p className="text-2xl font-semibold mb-2">AIデザインツールへようこそ</p>
+                <p>下のパネルから物件の写真やスケッチをアップロードして開始してください。</p>
+              </div>
+            )}
+            {!isLoading && !error && originalImage && !activeGeneratedImage && (
+               <div className="w-full max-w-4xl mx-auto relative" style={{ aspectRatio: displayAspectRatio }}>
+                <img src={originalImage} alt="アップロードされた画像" className="absolute inset-0 w-full h-full object-contain rounded-lg" />
+               </div>
+            )}
+            {!isLoading && !isFinetuningMode && originalImage && activeGeneratedImage && (
+              <div className="w-full">
+                {appMode === 'renovation' ? (
+                  <>
+                    { isQuotationMode ? (
+                      <div className="w-full max-w-6xl mx-auto">
+                        <div className="flex flex-col md:flex-row gap-4 items-start">
+                          <div className="w-full md:w-1/2">
+                            <h3 className="text-center text-lg font-bold mb-2 text-emerald-800">リフォーム前</h3>
+                            <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
+                              <img src={originalImage} alt="リフォーム前" className="absolute inset-0 w-full h-full object-contain" />
+                            </div>
+                          </div>
+                          <div className="w-full md:w-1/2">
+                            <h3 className="text-center text-lg font-bold mb-2 text-emerald-800">リフォーム後</h3>
+                            <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
+                              <img src={activeGeneratedImage.src} alt="リフォーム後" className="absolute inset-0 w-full h-full object-contain" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <ComparisonView before={originalImage} after={activeGeneratedImage.src} aspectRatio={displayAspectRatio} />
+                    )}
+                    {activeGeneratedImage.description && !isQuotationMode && (
+                      <div className="mt-6 max-w-4xl mx-auto bg-indigo-50 p-5 rounded-xl border border-indigo-200">
+                        <h4 className="text-md font-bold text-gray-800 mb-2 flex items-center gap-2">
+                          <SparklesIcon className="w-5 h-5 text-indigo-500" />
+                          AIによるリノベーションコンセプト
+                        </h4>
+                        <p className="text-sm text-gray-700 leading-relaxed">{activeGeneratedImage.description}</p>
+                      </div>
+                    )}
+                  </>
+                ) : ( // sketch2arch mode view
+                  <div className="w-full max-w-6xl mx-auto">
+                    <div className="flex flex-col md:flex-row gap-4 items-start">
+                      <div className="w-full md:w-1/2">
+                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">オリジナルスケッチ</h3>
+                        <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
+                          <img src={originalImage} alt="オリジナルスケッチ" className="absolute inset-0 w-full h-full object-contain" />
+                        </div>
+                      </div>
+                      <div className="w-full md:w-1/2">
+                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">生成されたパース</h3>
+                        <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
+                          <img src={activeGeneratedImage.src} alt="生成されたパース" className="absolute inset-0 w-full h-full object-contain" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+             {!isLoading && isFinetuningMode && !isQuotationMode && activeGeneratedImage && (
+              <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center">
+                 <div className="w-full relative" style={{ aspectRatio: displayAspectRatio }}>
+                  <img src={activeGeneratedImage.src} alt="微調整中の画像" className="absolute inset-0 w-full h-full object-contain rounded-lg" />
+                 </div>
+                 <p className="mt-4 text-sm font-semibold text-gray-600">この画像の微調整を行います</p>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile: Action buttons */}
+          {!isLoading && activeGeneratedImage && (
+             <div className="text-center mb-6 flex justify-center items-center gap-4 flex-wrap">
+              {!isFinetuningMode && !isQuotationMode && (
+                <>
+                  <button
+                    onClick={() => setIsFinetuningMode(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <SparklesIcon className="w-5 h-5" />
+                    この画像を微調整する
+                  </button>
+                  {appMode === 'renovation' && (
+                    <button
+                      onClick={handleEnterQuotationMode}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                    >
+                      <CalculatorIcon className="w-5 h-5" />
+                      この画像で見積もりに移る
+                    </button>
+                  )}
+                </>
+              )}
+              {isFinetuningMode && !isQuotationMode && appMode === 'renovation' && (
+                <button
+                  onClick={handleEnterQuotationMode}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                >
+                  <CalculatorIcon className="w-5 h-5" />
+                  この画像で見積もりに移る
+                </button>
+              )}
+               <button
+                onClick={handleDownload}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-bold rounded-lg border border-gray-300 hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <ArrowDownTrayIcon className="w-5 h-5" />
+                ダウンロード
+              </button>
+            </div>
+          )}
+
+          {/* Mobile: History panel */}
+          {originalImage && (
+            <HistoryPanel
+              originalImage={originalImage}
+              generatedImages={generatedImages}
+              activeImage={activeGeneratedImage?.src ?? null}
+              onSelect={handleHistorySelect}
+              originalImageLabel={appMode === 'sketch2arch' ? 'スケッチ' : 'オリジナル'}
+            />
+          )}
+
+          {/* Mobile: Control panel */}
+          <div className={`rounded-xl shadow-lg p-6 space-y-6 mt-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' : 'bg-white'}`}>
             {isQuotationMode ? (
               <QuotationPanel
                 onGetQuote={handleGetQuote}
@@ -670,9 +809,59 @@ const App: React.FC = () => {
             )}
           </div>
         </div>
-        <div className="lg:col-span-8 xl:col-span-9">
-         {originalImage && <ModeSelector />}
-          <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' :'bg-white'}`}>
+
+        {/* Desktop: Original layout */}
+        <div className="hidden lg:grid lg:grid-cols-12 gap-8 lg:items-start">
+          <div className="lg:col-span-4 xl:col-span-3">
+            <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' : 'bg-white'}`}>
+              {isQuotationMode ? (
+                <QuotationPanel
+                  onGetQuote={handleGetQuote}
+                  onExit={handleExitQuotationRequest}
+                  isQuoting={isQuoting}
+                  quotationResult={quotationResult}
+                  error={error}
+                  onDownloadImage={handleDownloadQuotationImage}
+                />
+              ) : (
+                <>
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-gray-700">1. 画像をアップロード</h2>
+                    {originalImage && (
+                      <button
+                        onClick={handleClearAll}
+                        className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 transition-colors font-semibold"
+                        title="全てクリアにする"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                        <span>クリア</span>
+                      </button>
+                    )}
+                  </div>
+                  <ImageUploader onImageUpload={handleImageUpload} image={originalImage} onError={handleUploadError} />
+                  {originalImage && (
+                    <>
+                      <h2 className="text-xl font-bold text-gray-700 pt-4">2. モードを選択</h2>
+                      <RenovationPanel
+                        appMode={appMode}
+                        onGenerate={handleGenerate}
+                        isDisabled={isLoading}
+                        activeImage={isFinetuningMode && activeGeneratedImage ? activeGeneratedImage.src : originalImage}
+                        mimeType={mimeType}
+                        isFinetuningMode={isFinetuningMode}
+                        onExitFinetuning={() => setIsFinetuningMode(false)}
+                        categories={categories}
+                        products={products}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          <div className="lg:col-span-8 xl:col-span-9">
+           {originalImage && <ModeSelector />}
+            <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' :'bg-white'}`}>
             {isLoading && <Loader messages={appMode === 'renovation' ? renovationLoadingMessages : sketchLoadingMessages} />}
             {!isLoading && error && !isQuotationMode && (
               <ErrorDisplay error={error} />
@@ -752,6 +941,7 @@ const App: React.FC = () => {
             )}
           </div>
 
+          {/* Desktop: Action buttons */}
           {!isLoading && activeGeneratedImage && (
              <div className="text-center mt-6 flex justify-center items-center gap-4 flex-wrap">
               {!isFinetuningMode && !isQuotationMode && (
@@ -793,6 +983,7 @@ const App: React.FC = () => {
             </div>
           )}
 
+          {/* Desktop: History panel */}
           {originalImage && (
             <HistoryPanel
               originalImage={originalImage}
@@ -802,6 +993,7 @@ const App: React.FC = () => {
               originalImageLabel={appMode === 'sketch2arch' ? 'スケッチ' : 'オリジナル'}
             />
           )}
+          </div>
         </div>
       </main>
 
