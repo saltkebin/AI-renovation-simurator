@@ -77,6 +77,17 @@ jobs:
         env:
           VITE_GEMINI_API_KEY: ${{ env.VITE_GEMINI_API_KEY }}
 
+      - name: Create dynamic .firebaserc for deployment
+        run: |
+          cat > .firebaserc << EOF
+          {
+            "projects": {
+              "default": "${{ env.VITE_FIREBASE_PROJECT_ID }}"
+            }
+          }
+          EOF
+          echo "Generated .firebaserc with project: ${{ env.VITE_FIREBASE_PROJECT_ID }}"
+
       - name: Deploy to Firebase Hosting
         # FirebaseExtended/action-hosting-deploy expects service account json content
         uses: FirebaseExtended/action-hosting-deploy@v0
