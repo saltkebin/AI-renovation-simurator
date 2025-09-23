@@ -33,55 +33,54 @@ jobs:
             sudo apt-get install -y jq
           fi
 
-      - name: Export Firebase Service Account and Config
-        id: export_secrets
+      - name: Export secrets and parse Firebase Config
+        id: export_and_parse
         run: |
           CLIENT="${{ github.event.inputs.client }}"
           echo "Selected client: $CLIENT"
 
           if [ "$CLIENT" = "hitotoiro" ]; then
+            # Export Service Account
             echo "FIREBASE_SERVICE_ACCOUNT_JSON<<EOF" >> $GITHUB_ENV
             echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_HITOTOIRO }}" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
 
-            echo "FIREBASE_CONFIG_JSON<<EOF" >> $GITHUB_ENV
-            echo "${{ secrets.FIREBASE_CONFIG_HITOTOIRO }}" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-
+            # Export Gemini API Key
             echo "VITE_GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_HITOTOIRO }}" >> $GITHUB_ENV
+
+            # Parse Firebase Config directly without storing in env first
+            FIREBASE_CONFIG="${{ secrets.FIREBASE_CONFIG_HITOTOIRO }}"
           else
+            # Export Service Account
             echo "FIREBASE_SERVICE_ACCOUNT_JSON<<EOF" >> $GITHUB_ENV
             echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEFAULT }}" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
 
-            echo "FIREBASE_CONFIG_JSON<<EOF" >> $GITHUB_ENV
-            echo "${{ secrets.FIREBASE_CONFIG_DEFAULT }}" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-
+            # Export Gemini API Key
             echo "VITE_GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_DEFAULT }}" >> $GITHUB_ENV
+
+            # Parse Firebase Config directly without storing in env first
+            FIREBASE_CONFIG="${{ secrets.FIREBASE_CONFIG_DEFAULT }}"
           fi
 
-      - name: Parse Firebase Config
-        id: parse_config
-        run: |
           echo "=== Parse Firebase Config Debug ==="
-          echo "FIREBASE_CONFIG_JSON content:"
-          echo "$FIREBASE_CONFIG_JSON"
+          echo "Direct Firebase Config parsing (without env variable):"
+          echo "$FIREBASE_CONFIG"
           echo "=========================="
 
           # Validate JSON format
-          if ! echo "$FIREBASE_CONFIG_JSON" | jq empty; then
-            echo "ERROR: Invalid JSON format in FIREBASE_CONFIG_JSON" >&2
+          if ! echo "$FIREBASE_CONFIG" | jq empty; then
+            echo "ERROR: Invalid JSON format in Firebase Config" >&2
             exit 1
           fi
 
           # Parse Firebase config JSON into env vars
-          echo "VITE_FIREBASE_API_KEY=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.apiKey')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_AUTH_DOMAIN=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.authDomain')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_PROJECT_ID=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.projectId')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_STORAGE_BUCKET=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.storageBucket')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.messagingSenderId')" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_APP_ID=$(echo "$FIREBASE_CONFIG_JSON" | jq -r '.appId')" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_API_KEY=$(echo "$FIREBASE_CONFIG" | jq -r '.apiKey')" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_AUTH_DOMAIN=$(echo "$FIREBASE_CONFIG" | jq -r '.authDomain')" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_PROJECT_ID=$(echo "$FIREBASE_CONFIG" | jq -r '.projectId')" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_STORAGE_BUCKET=$(echo "$FIREBASE_CONFIG" | jq -r '.storageBucket')" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(echo "$FIREBASE_CONFIG" | jq -r '.messagingSenderId')" >> $GITHUB_ENV
+          echo "VITE_FIREBASE_APP_ID=$(echo "$FIREBASE_CONFIG" | jq -r '.appId')" >> $GITHUB_ENV
 
           echo "Parsed Firebase environment variables successfully"
 
