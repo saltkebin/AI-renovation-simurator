@@ -24,9 +24,15 @@
 
 ### 必要な情報
 
-1. **クライアント名** (英小文字推奨、例: `hitotoiro`)
+1. **クライアント名** (英小文字推奨、例: `hitotoiro`, `newclient`)
 2. **Gemini APIキー** (クライアント専用)
 3. **希望PINコード** (6桁)
+
+### 現在のクライアント一覧
+
+- **default** → `airenovation2` → https://airenovation2.web.app
+- **hitotoiro** → `airenovation-hitotoiro` → https://airenovation-hitotoiro.web.app
+- **ishibashihome** → `airenovation-horimoto` → https://airenovation-horimoto.web.app
 
 ---
 
@@ -315,11 +321,30 @@ https://airenovation-[client].web.app
 
 ## 📝 次回クライアント追加時
 
+### 🚀 自動化スクリプトを使用（推奨）
+
+```bash
+# 新規クライアント完全セットアップ
+./scripts/setup-new-client.sh <client-name> <firebase-project-id>
+
+# 例:
+./scripts/setup-new-client.sh newclient airenovation-newclient
+```
+
+このスクリプトが自動実行：
+1. GitHub Actions workflows更新
+2. CORS設定適用
+3. ドキュメント更新
+4. Git commit
+
+### 🔧 手動実行の場合
+
 このドキュメントに従って：
 1. 新しいFirebaseプロジェクト作成
 2. GitHub Secrets追加
 3. Workflow選択肢更新
-4. デプロイ実行
-5. セキュリティ設定
+4. CORS設定 (`./scripts/setup-client-cors.sh`)
+5. デプロイ実行
+6. セキュリティ設定
 
 **12分で新規クライアント環境構築完了！**
