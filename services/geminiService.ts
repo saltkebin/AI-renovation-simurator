@@ -203,9 +203,12 @@ ${prompt}`;
         const targetHeight = roomImage.naturalHeight;
 
         // Process all product images to match the room image's aspect ratio
+        console.log(`Processing ${products.length} product images...`);
         const processedProductParts = await Promise.all(
-            products.map(async (product) => {
+            products.map(async (product, index) => {
+                console.log(`Processing product ${index + 1}/${products.length}:`, product.src);
                 const processed = await processProductImage(product.src, targetWidth, targetHeight);
+                console.log(`Product ${index + 1} processed successfully`);
                 return {
                     inlineData: {
                         data: processed.data,
@@ -214,6 +217,7 @@ ${prompt}`;
                 };
             })
         );
+        console.log("All product images processed, calling Gemini API...");
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image-preview',
@@ -235,9 +239,16 @@ ${prompt}`;
                 responseModalities: [Modality.IMAGE],
             },
         });
-        
+
+        console.log("Gemini API response received:", {
+            hasCandidates: !!response.candidates,
+            candidatesLength: response.candidates?.length || 0,
+            promptFeedback: response.promptFeedback
+        });
+
         if (!response.candidates || response.candidates.length === 0) {
             const blockReason = response.promptFeedback?.blockReason;
+            console.error("No candidates in response. Block reason:", blockReason);
             if (blockReason) {
                 throw new Error(`リクエストが安全上の理由でブロックされました (${blockReason})。プロンプトや画像を変更して再度お試しください。`);
             }
@@ -246,21 +257,33 @@ ${prompt}`;
 
         const candidate = response.candidates[0];
 
+        console.log("Candidate details:", {
+            finishReason: candidate.finishReason,
+            hasContent: !!candidate.content,
+            partsLength: candidate.content?.parts?.length || 0
+        });
+
         if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+            console.error("Generation did not complete. Finish reason:", candidate.finishReason);
             throw new Error(`画像の生成が完了しませんでした。理由: ${candidate.finishReason}`);
         }
 
         const result: RenovationResult = { image: null, text: null, mimeType: null };
 
         if (candidate.content && candidate.content.parts) {
+            console.log("Processing candidate parts...");
             for (const part of candidate.content.parts) {
                 if (part.inlineData) {
+                    console.log("Found image data in response");
                     result.image = part.inlineData.data;
                     result.mimeType = part.inlineData.mimeType;
                 } else if (part.text) {
+                    console.log("Found text in response:", part.text);
                     result.text = part.text;
                 }
             }
+        } else {
+            console.error("No content or parts in candidate");
         }
         
         if (!result.image) {
