@@ -300,3 +300,19 @@ export const EXTERIOR_MATERIALS: ExteriorMaterialOption[] = [
   { id: 'concrete', name: 'コンクリート', promptFragment: '外壁をコンクリート打ちっぱなし風に変更してください。モダンで無機質な印象にしてください。' },
   { id: 'brick', name: 'レンガ', promptFragment: '外壁をレンガ調に変更してください。クラシックで重厚感のある仕上がりにしてください。' },
 ];
+
+// Split ratios for two-tone colors
+export const SPLIT_RATIOS = [
+  { value: 30, label: '上部30% / 下部70%' },
+  { value: 50, label: '上下50% / 50%' },
+  { value: 70, label: '上部70% / 下部30%' },
+];
+
+// Paint product categories
+export const PAINT_CATEGORIES = [
+  { id: 'all', name: '全て' },
+  { id: 'silicon', name: 'シリコン塗料' },
+  { id: 'fluorine', name: 'フッ素塗料' },
+  { id: 'inorganic', name: '無機塗料' },
+  { id: 'heat_shield', name: '遮熱塗料' },
+];

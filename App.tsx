@@ -577,12 +577,19 @@ const App: React.FC = () => {
     "空間をデザインしています...",
     "もうすぐ完成です...",
   ];
-  
+
   const sketchLoadingMessages = [
     "スケッチを3Dモデルに変換中...",
     "リアリティのある質感をレンダリングしています...",
     "照明と陰影を調整しています...",
     "まもなく完成です、お待ちください...",
+  ];
+
+  const exteriorPaintingLoadingMessages = [
+    "外壁の色と素材を分析中...",
+    "建物の構造を保ちながら外壁をペイントしています...",
+    "テクスチャと質感を調整しています...",
+    "仕上げ作業中、もうすぐ完成です...",
   ];
 
   const ModeSelector = () => (
@@ -634,8 +641,14 @@ const App: React.FC = () => {
           {originalImage && <ModeSelector />}
 
           {/* Mobile: Image display area */}
-          <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 mb-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
-            {isLoading && <Loader messages={appMode === 'renovation' ? renovationLoadingMessages : sketchLoadingMessages} />}
+          <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 mb-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
+            {isLoading && <Loader messages={
+              appMode === 'renovation'
+                ? renovationLoadingMessages
+                : (exteriorSubMode === 'exterior_painting'
+                    ? exteriorPaintingLoadingMessages
+                    : sketchLoadingMessages)
+            } />}
             {!isLoading && error && !isQuotationMode && (
               <ErrorDisplay error={error} />
             )}
@@ -768,7 +781,7 @@ const App: React.FC = () => {
           )}
 
           {/* Mobile: Control panel */}
-          <div className={`rounded-xl shadow-lg p-6 space-y-6 mt-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
+          <div className={`rounded-xl shadow-lg p-6 space-y-6 mt-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
             {isQuotationMode ? (
               <QuotationPanel
                 onGetQuote={handleGetQuote}
@@ -820,7 +833,7 @@ const App: React.FC = () => {
         {/* Desktop: Original layout */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-8 lg:items-start">
           <div className="lg:col-span-4 xl:col-span-3">
-            <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
+            <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
               {isQuotationMode ? (
                 <QuotationPanel
                   onGetQuote={handleGetQuote}
@@ -868,10 +881,16 @@ const App: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="lg:col-span-8 xl:col-span-9">
+          <div className="lg:col-span-8 xl:col-span-9 sticky top-8 self-start max-h-[calc(100vh-4rem)] overflow-y-auto">
            {originalImage && <ModeSelector />}
-            <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
-            {isLoading && <Loader messages={appMode === 'renovation' ? renovationLoadingMessages : sketchLoadingMessages} />}
+            <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
+            {isLoading && <Loader messages={
+              appMode === 'renovation'
+                ? renovationLoadingMessages
+                : (exteriorSubMode === 'exterior_painting'
+                    ? exteriorPaintingLoadingMessages
+                    : sketchLoadingMessages)
+            } />}
             {!isLoading && error && !isQuotationMode && (
               <ErrorDisplay error={error} />
             )}

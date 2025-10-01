@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // FIX: Import AppMode type.
-import type { RenovationMode, FurnitureStyleId, RoomTypeId, RegisteredProduct, ProductCategory, ArchOption, AppMode, SketchCategory, SketchFinetuneTabId, SketchFinetuneOption, ExteriorSubMode } from '../types';
-import { RENOVATION_CATEGORIES, OMAKASE_PROMPT, OMAKASE_SKETCH_PROMPT, FURNITURE_STYLES, ROOM_TYPES, SKETCH_CATEGORIES, SKETCH_FINETUNE_TABS, EXTERIOR_COLORS, EXTERIOR_MATERIALS } from '../constants';
+import type { RenovationMode, FurnitureStyleId, RoomTypeId, RegisteredProduct, ProductCategory, ArchOption, AppMode, SketchCategory, SketchFinetuneTabId, SketchFinetuneOption, ExteriorSubMode, ColorMode } from '../types';
+import { RENOVATION_CATEGORIES, OMAKASE_PROMPT, OMAKASE_SKETCH_PROMPT, FURNITURE_STYLES, ROOM_TYPES, SKETCH_CATEGORIES, SKETCH_FINETUNE_TABS, EXTERIOR_COLORS, EXTERIOR_MATERIALS, SPLIT_RATIOS } from '../constants';
 import { MagicWandIcon, EditIcon, SparklesIcon, LightBulbIcon, SpinnerIcon, ArrowUturnLeftIcon, SofaIcon, UserGroupIcon, BuildingStorefrontIcon, HomeModernIcon, CubeIcon, SwatchIcon, DocumentTextIcon, PencilIcon, PaintBrushIcon, TrashIcon } from './Icon';
 import { generateSuggestions } from '../services/geminiService';
 
@@ -66,13 +66,21 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   const [customSceneryPrompt, setCustomSceneryPrompt] = useState('');
 
   // Exterior painting states
-  const [exteriorPaintingActiveTab, setExteriorPaintingActiveTab] = useState<'easy' | 'detailed'>('easy');
+  const [exteriorPaintingActiveTab, setExteriorPaintingActiveTab] = useState<'easy' | 'detailed' | 'products'>('easy');
   const [selectedExteriorColor, setSelectedExteriorColor] = useState<string>('');
   const [selectedExteriorMaterial, setSelectedExteriorMaterial] = useState<string>('');
   const [exteriorCustomPrompt, setExteriorCustomPrompt] = useState('');
   const [customR, setCustomR] = useState<number>(255);
   const [customG, setCustomG] = useState<number>(255);
   const [customB, setCustomB] = useState<number>(255);
+
+  // Two-tone color states
+  const [colorMode, setColorMode] = useState<ColorMode>('single');
+  const [secondaryColor, setSecondaryColor] = useState<string>('');
+  const [secondaryR, setSecondaryR] = useState<number>(255);
+  const [secondaryG, setSecondaryG] = useState<number>(255);
+  const [secondaryB, setSecondaryB] = useState<number>(255);
+  const [splitRatio, setSplitRatio] = useState<number>(50);
 
   // Exterior painting presets by category
   const exteriorPresetCategories = [
@@ -140,7 +148,147 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
     },
   ];
 
+  // Two-tone color presets
+  const twoTonePresets = [
+    {
+      id: 'white_gray_horizontal',
+      name: 'ホワイト×グレー',
+      mode: 'two_tone_horizontal' as ColorMode,
+      primaryColor: 'white',
+      secondaryColor: 'gray',
+      splitRatio: 70,
+      material: 'siding'
+    },
+    {
+      id: 'beige_brown_horizontal',
+      name: 'ベージュ×ブラウン',
+      mode: 'two_tone_horizontal' as ColorMode,
+      primaryColor: 'beige',
+      secondaryColor: 'brown',
+      splitRatio: 60,
+      material: 'stucco'
+    },
+    {
+      id: 'cream_navy_horizontal',
+      name: 'クリーム×ネイビー',
+      mode: 'two_tone_horizontal' as ColorMode,
+      primaryColor: 'cream',
+      secondaryColor: 'navy',
+      splitRatio: 70,
+      material: 'siding'
+    },
+    {
+      id: 'white_darkgray_horizontal',
+      name: 'ホワイト×ダークグレー',
+      mode: 'two_tone_horizontal' as ColorMode,
+      primaryColor: 'white',
+      secondaryColor: 'dark_gray',
+      splitRatio: 50,
+      material: 'concrete'
+    },
+    {
+      id: 'lightgray_brown_horizontal',
+      name: 'ライトグレー×ブラウン',
+      mode: 'two_tone_horizontal' as ColorMode,
+      primaryColor: 'light_gray',
+      secondaryColor: 'brown',
+      splitRatio: 60,
+      material: 'siding'
+    },
+    {
+      id: 'white_green_vertical',
+      name: 'ホワイト×グリーン',
+      mode: 'two_tone_vertical' as ColorMode,
+      primaryColor: 'white',
+      secondaryColor: 'green',
+      splitRatio: 50,
+      material: 'wood'
+    },
+    {
+      id: 'beige_gray_vertical',
+      name: 'ベージュ×グレー',
+      mode: 'two_tone_vertical' as ColorMode,
+      primaryColor: 'beige',
+      secondaryColor: 'gray',
+      splitRatio: 50,
+      material: 'stucco'
+    },
+    {
+      id: 'cream_black_horizontal',
+      name: 'クリーム×ブラック',
+      mode: 'two_tone_horizontal' as ColorMode,
+      primaryColor: 'cream',
+      secondaryColor: 'black',
+      splitRatio: 70,
+      material: 'tile'
+    },
+    {
+      id: 'lightgray_navy_horizontal',
+      name: 'ライトグレー×ネイビー',
+      mode: 'two_tone_horizontal' as ColorMode,
+      primaryColor: 'light_gray',
+      secondaryColor: 'navy',
+      splitRatio: 60,
+      material: 'siding'
+    },
+    {
+      id: 'white_brown_vertical',
+      name: 'ホワイト×ブラウン',
+      mode: 'two_tone_vertical' as ColorMode,
+      primaryColor: 'white',
+      secondaryColor: 'brown',
+      splitRatio: 50,
+      material: 'wood'
+    },
+    {
+      id: 'cream_darkgray_vertical',
+      name: 'クリーム×ダークグレー',
+      mode: 'two_tone_vertical' as ColorMode,
+      primaryColor: 'cream',
+      secondaryColor: 'dark_gray',
+      splitRatio: 50,
+      material: 'siding'
+    },
+    {
+      id: 'lightgray_brown_vertical',
+      name: 'ライトグレー×ブラウン',
+      mode: 'two_tone_vertical' as ColorMode,
+      primaryColor: 'light_gray',
+      secondaryColor: 'brown',
+      splitRatio: 50,
+      material: 'wood'
+    },
+    {
+      id: 'white_navy_vertical',
+      name: 'ホワイト×ネイビー',
+      mode: 'two_tone_vertical' as ColorMode,
+      primaryColor: 'white',
+      secondaryColor: 'navy',
+      splitRatio: 50,
+      material: 'tile'
+    },
+    {
+      id: 'beige_black_vertical',
+      name: 'ベージュ×ブラック',
+      mode: 'two_tone_vertical' as ColorMode,
+      primaryColor: 'beige',
+      secondaryColor: 'black',
+      splitRatio: 50,
+      material: 'concrete'
+    },
+    {
+      id: 'gray_brown_vertical',
+      name: 'グレー×ブラウン',
+      mode: 'two_tone_vertical' as ColorMode,
+      primaryColor: 'gray',
+      secondaryColor: 'brown',
+      splitRatio: 50,
+      material: 'stucco'
+    },
+  ];
+
   const [exteriorPresetOpenAccordion, setExteriorPresetOpenAccordion] = useState<string | null>(null);
+  const [easyTabColorType, setEasyTabColorType] = useState<'single' | 'two_tone_horizontal' | 'two_tone_vertical'>('single');
 
 
   useEffect(() => {
@@ -641,8 +789,56 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
       }).join('').toUpperCase();
     };
 
+    const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 255, g: 255, b: 255 };
+    };
+
+    const handlePresetColorSelect = (colorId: string) => {
+      const isDeselecting = colorId === selectedExteriorColor;
+      setSelectedExteriorColor(isDeselecting ? '' : colorId);
+
+      if (isDeselecting) {
+        // Reset RGB sliders to white (255, 255, 255) when deselecting
+        setCustomR(255);
+        setCustomG(255);
+        setCustomB(255);
+      } else {
+        const color = EXTERIOR_COLORS.find(c => c.id === colorId);
+        if (color) {
+          const rgb = hexToRgb(color.hex);
+          setCustomR(rgb.r);
+          setCustomG(rgb.g);
+          setCustomB(rgb.b);
+        }
+      }
+    };
+
+    const handleSecondaryPresetColorSelect = (colorId: string) => {
+      const isDeselecting = colorId === secondaryColor;
+      setSecondaryColor(isDeselecting ? '' : colorId);
+
+      if (isDeselecting) {
+        setSecondaryR(255);
+        setSecondaryG(255);
+        setSecondaryB(255);
+      } else {
+        const color = EXTERIOR_COLORS.find(c => c.id === colorId);
+        if (color) {
+          const rgb = hexToRgb(color.hex);
+          setSecondaryR(rgb.r);
+          setSecondaryG(rgb.g);
+          setSecondaryB(rgb.b);
+        }
+      }
+    };
+
     const handleExteriorGenerate = () => {
-      if (!selectedExteriorColor && !selectedExteriorMaterial && !exteriorCustomPrompt.trim()) {
+      if (!selectedExteriorColor && !selectedExteriorMaterial && !exteriorCustomPrompt.trim() && colorMode === 'single') {
         alert('色、素材、またはカスタム指示のいずれかを選択してください。');
         return;
       }
@@ -661,15 +857,35 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
 変更してよいのは外壁の表面の色と質感のみです。外壁面だけをペイントするイメージで、以下の指示に従って変更してください。`;
 
-      if (selectedExteriorColor) {
-        const color = EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor);
-        if (color) {
-          promptParts.push(`外壁の色を${color.name}（16進数カラーコード: ${color.hex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。`);
-        }
+      // Two-tone color handling
+      if (colorMode === 'two_tone_horizontal') {
+        const primaryHex = selectedExteriorColor ? EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor)?.hex : rgbToHex(customR, customG, customB);
+        const secondaryHex = secondaryColor ? EXTERIOR_COLORS.find(c => c.id === secondaryColor)?.hex : rgbToHex(secondaryR, secondaryG, secondaryB);
+
+        promptParts.push(`外壁を水平に2色に分けてツートンカラーにしてください：
+- 上部（建物の${splitRatio}%）: ${selectedExteriorColor ? EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor)?.name : `RGB(${customR}, ${customG}, ${customB})`}（カラーコード: ${primaryHex}）
+- 下部（建物の${100 - splitRatio}%）: ${secondaryColor ? EXTERIOR_COLORS.find(c => c.id === secondaryColor)?.name : `RGB(${secondaryR}, ${secondaryG}, ${secondaryB})`}（カラーコード: ${secondaryHex}）
+境界線は自然な水平ラインで、建物の構造に沿って区切ってください。`);
+      } else if (colorMode === 'two_tone_vertical') {
+        const primaryHex = selectedExteriorColor ? EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor)?.hex : rgbToHex(customR, customG, customB);
+        const secondaryHex = secondaryColor ? EXTERIOR_COLORS.find(c => c.id === secondaryColor)?.hex : rgbToHex(secondaryR, secondaryG, secondaryB);
+
+        promptParts.push(`外壁を垂直に2色に分けてツートンカラーにしてください：
+- 左側（建物の${splitRatio}%）: ${selectedExteriorColor ? EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor)?.name : `RGB(${customR}, ${customG}, ${customB})`}（カラーコード: ${primaryHex}）
+- 右側（建物の${100 - splitRatio}%）: ${secondaryColor ? EXTERIOR_COLORS.find(c => c.id === secondaryColor)?.name : `RGB(${secondaryR}, ${secondaryG}, ${secondaryB})`}（カラーコード: ${secondaryHex}）
+境界線は自然な垂直ラインで、建物の構造に沿って区切ってください。`);
       } else {
-        // Use custom RGB color if no preset color is selected
-        const customHex = rgbToHex(customR, customG, customB);
-        promptParts.push(`外壁の色をRGB(${customR}, ${customG}, ${customB})（16進数カラーコード: ${customHex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。`);
+        // Single color mode
+        if (selectedExteriorColor) {
+          const color = EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor);
+          if (color) {
+            promptParts.push(`外壁の色を${color.name}（16進数カラーコード: ${color.hex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。`);
+          }
+        } else {
+          // Use custom RGB color if no preset color is selected
+          const customHex = rgbToHex(customR, customG, customB);
+          promptParts.push(`外壁の色をRGB(${customR}, ${customG}, ${customB})（16進数カラーコード: ${customHex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。`);
+        }
       }
 
       if (selectedExteriorMaterial) {
@@ -694,14 +910,20 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
       setCustomR(255);
       setCustomG(255);
       setCustomB(255);
+      setColorMode('single');
+      setSecondaryColor('');
+      setSecondaryR(255);
+      setSecondaryG(255);
+      setSecondaryB(255);
+      setSplitRatio(50);
     };
 
-    const handlePresetSelect = (preset: typeof exteriorPresets[0]) => {
+    const handlePresetSelect = (preset: typeof exteriorPresetCategories[0]['presets'][0]) => {
       setSelectedExteriorColor(preset.color);
       setSelectedExteriorMaterial(preset.material);
     };
 
-    const handlePresetGenerate = (preset: typeof exteriorPresets[0]) => {
+    const handlePresetGenerate = (preset: typeof exteriorPresetCategories[0]['presets'][0]) => {
       const color = EXTERIOR_COLORS.find(c => c.id === preset.color);
       const material = EXTERIOR_MATERIALS.find(m => m.id === preset.material);
 
@@ -728,9 +950,47 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
       onGenerate('partial', finalPrompt);
     };
 
-    const EXTERIOR_PAINTING_TABS: { id: 'easy' | 'detailed'; name: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
+    const handleTwoTonePresetGenerate = (preset: typeof twoTonePresets[0]) => {
+      const primaryColor = EXTERIOR_COLORS.find(c => c.id === preset.primaryColor);
+      const secondaryColor = EXTERIOR_COLORS.find(c => c.id === preset.secondaryColor);
+      const material = EXTERIOR_MATERIALS.find(m => m.id === preset.material);
+
+      let promptParts: string[] = [];
+      const basePrompt = `重要な制約：この建物の外観写真について、以下の要素は絶対に変更しないでください：
+- 建物の構造（柱、梁、基礎）
+- 建物の形状（高さ、幅、奥行き）
+- 窓の位置、大きさ、形状
+- ドアの位置、大きさ、形状
+- 屋根の形状、色、素材
+- 周囲の環境（植栽、地面、空、背景）
+- 建物の配置や向き
+
+変更してよいのは外壁の表面の色と質感のみです。外壁面だけをペイントするイメージで、以下の指示に従って変更してください。`;
+
+      if (preset.mode === 'two_tone_horizontal') {
+        promptParts.push(`外壁を水平に2色に分けてツートンカラーにしてください：
+- 上部: ${primaryColor?.name}（カラーコード: ${primaryColor?.hex}）
+- 下部: ${secondaryColor?.name}（カラーコード: ${secondaryColor?.hex}）
+境界線は建物の構造やバランスを考慮し、自然な水平ラインで区切ってください。分割比率は建物の形状に合わせて最適なバランスを自動で判断してください。`);
+      } else if (preset.mode === 'two_tone_vertical') {
+        promptParts.push(`外壁を垂直に2色に分けてツートンカラーにしてください：
+- 左側: ${primaryColor?.name}（カラーコード: ${primaryColor?.hex}）
+- 右側: ${secondaryColor?.name}（カラーコード: ${secondaryColor?.hex}）
+境界線は建物の構造やバランスを考慮し、自然な垂直ラインで区切ってください。分割比率は建物の形状に合わせて最適なバランスを自動で判断してください。`);
+      }
+
+      if (material) {
+        promptParts.push(material.promptFragment);
+      }
+
+      const finalPrompt = `${basePrompt}\n\n${promptParts.join('\n\n')}`;
+      onGenerate('partial', finalPrompt);
+    };
+
+    const EXTERIOR_PAINTING_TABS: { id: 'easy' | 'detailed' | 'products'; name: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
       { id: 'easy', name: 'かんたん', icon: MagicWandIcon },
-      { id: 'detailed', name: '詳細設定', icon: EditIcon }
+      { id: 'detailed', name: '詳細設定', icon: EditIcon },
+      { id: 'products', name: '商品', icon: BuildingStorefrontIcon }
     ];
 
     const renderEasyTab = () => (
@@ -757,68 +1017,152 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
           <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
+        {/* Color Type Selection: 1色, 2色(上下), 2色(左右) */}
+        <div>
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setEasyTabColorType('single')}
+              className={`flex-1 px-3 py-2 rounded-lg border-2 font-medium transition-all ${
+                easyTabColorType === 'single'
+                  ? 'border-green-600 bg-green-50 text-green-700'
+                  : 'border-gray-300 text-gray-700 hover:border-green-400'
+              }`}
+            >
+              1色
+            </button>
+            <button
+              onClick={() => setEasyTabColorType('two_tone_horizontal')}
+              className={`flex-1 px-3 py-2 rounded-lg border-2 font-medium transition-all ${
+                easyTabColorType === 'two_tone_horizontal'
+                  ? 'border-green-600 bg-green-50 text-green-700'
+                  : 'border-gray-300 text-gray-700 hover:border-green-400'
+              }`}
+            >
+              2色(上下)
+            </button>
+            <button
+              onClick={() => setEasyTabColorType('two_tone_vertical')}
+              className={`flex-1 px-3 py-2 rounded-lg border-2 font-medium transition-all ${
+                easyTabColorType === 'two_tone_vertical'
+                  ? 'border-green-600 bg-green-50 text-green-700'
+                  : 'border-gray-300 text-gray-700 hover:border-green-400'
+              }`}
+            >
+              2色(左右)
+            </button>
+          </div>
+        </div>
+
         {/* Preset Categories Accordion */}
         <div>
           <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
             <SwatchIcon className="w-5 h-5 text-green-600" />
-            カラー別おすすめスタイル
+            {easyTabColorType === 'single'
+              ? 'カラー別おすすめスタイル（1色）'
+              : easyTabColorType === 'two_tone_horizontal'
+              ? 'おすすめツートンスタイル（上下分割）'
+              : 'おすすめツートンスタイル（左右分割）'}
           </h4>
-          <div className="border rounded-lg overflow-hidden">
-            {exteriorPresetCategories.map((category) => (
-              <div key={category.id} className="border-b last:border-b-0">
-                <button
-                  onClick={() => setExteriorPresetOpenAccordion(exteriorPresetOpenAccordion === category.id ? null : category.id)}
-                  className="w-full flex justify-between items-center p-4 text-left font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                >
-                  <span className="flex items-center gap-3">
-                    <category.icon className="w-5 h-5 text-green-600" />
-                    {category.name}
-                    <span className="text-xs text-gray-500 font-normal">（{category.presets.length}種類）</span>
-                  </span>
-                  <svg
-                    className={`w-5 h-5 text-gray-500 transform transition-transform ${
-                      exteriorPresetOpenAccordion === category.id ? 'rotate-180' : ''
-                    }`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {exteriorPresetOpenAccordion === category.id && (
-                  <div className="p-4 bg-gray-50">
-                    <div className="grid grid-cols-1 gap-3">
-                      {category.presets.map((preset) => {
-                        const color = EXTERIOR_COLORS.find(c => c.id === preset.color);
-                        const material = EXTERIOR_MATERIALS.find(m => m.id === preset.material);
-                        return (
-                          <button
-                            key={preset.id}
-                            onClick={() => handlePresetGenerate(preset)}
-                            disabled={isDisabled}
-                            className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-green-400 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
-                          >
-                            <div
-                              className="w-12 h-12 rounded-lg border-2 border-gray-300 flex-shrink-0"
-                              style={{ backgroundColor: color?.hex }}
-                            />
-                            <div className="flex-grow">
-                              <div className="font-semibold text-gray-800">{preset.name}</div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {color?.name} × {material?.name}
-                              </div>
-                            </div>
-                            <SparklesIcon className="w-5 h-5 text-green-600 flex-shrink-0" />
-                          </button>
-                        );
-                      })}
-                    </div>
+
+          {/* Single Color Presets */}
+          {easyTabColorType === 'single' && (
+            <div className="border rounded-lg overflow-hidden">
+              {exteriorPresetCategories.map((category) => (
+                  <div key={category.id} className="border-b last:border-b-0">
+                    <button
+                      onClick={() => setExteriorPresetOpenAccordion(exteriorPresetOpenAccordion === category.id ? null : category.id)}
+                      className="w-full flex justify-between items-center p-4 text-left font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="flex items-center gap-3">
+                        <category.icon className="w-5 h-5 text-green-600" />
+                        {category.name}
+                        <span className="text-xs text-gray-500 font-normal">（{category.presets.length}種類）</span>
+                      </span>
+                      <svg
+                        className={`w-5 h-5 text-gray-500 transform transition-transform ${
+                          exteriorPresetOpenAccordion === category.id ? 'rotate-180' : ''
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {exteriorPresetOpenAccordion === category.id && (
+                      <div className="p-4 bg-gray-50">
+                        <div className="grid grid-cols-1 gap-3">
+                          {category.presets.map((preset) => {
+                            const color = EXTERIOR_COLORS.find(c => c.id === preset.color);
+                            const material = EXTERIOR_MATERIALS.find(m => m.id === preset.material);
+                            return (
+                              <button
+                                key={preset.id}
+                                onClick={() => handlePresetGenerate(preset)}
+                                disabled={isDisabled}
+                                className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-green-400 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                              >
+                                <div
+                                  className="w-12 h-12 rounded-lg border-2 border-gray-300 flex-shrink-0"
+                                  style={{ backgroundColor: color?.hex }}
+                                />
+                                <div className="flex-grow">
+                                  <div className="font-semibold text-gray-800">{preset.name}</div>
+                                </div>
+                                <SparklesIcon className="w-5 h-5 text-green-600 flex-shrink-0" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {/* Two-Tone Color Presets */}
+          {(easyTabColorType === 'two_tone_horizontal' || easyTabColorType === 'two_tone_vertical') && (
+            <div className="grid grid-cols-1 gap-3">
+              {twoTonePresets.filter(preset => preset.mode === easyTabColorType).map((preset) => {
+                const primaryColor = EXTERIOR_COLORS.find(c => c.id === preset.primaryColor);
+                const secondaryColor = EXTERIOR_COLORS.find(c => c.id === preset.secondaryColor);
+                const material = EXTERIOR_MATERIALS.find(m => m.id === preset.material);
+
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => handleTwoTonePresetGenerate(preset)}
+                    disabled={isDisabled}
+                    className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-green-400 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                  >
+                    <div className={`flex gap-1 flex-shrink-0 ${preset.mode === 'two_tone_horizontal' ? 'flex-col' : 'flex-row'}`}>
+                      <div
+                        className={`border-2 border-gray-300 ${
+                          preset.mode === 'two_tone_horizontal'
+                            ? 'w-12 h-6 rounded-t-lg'
+                            : 'w-6 h-12 rounded-l-lg'
+                        }`}
+                        style={{ backgroundColor: primaryColor?.hex }}
+                      />
+                      <div
+                        className={`border-2 border-gray-300 ${
+                          preset.mode === 'two_tone_horizontal'
+                            ? 'w-12 h-6 rounded-b-lg'
+                            : 'w-6 h-12 rounded-r-lg'
+                        }`}
+                        style={{ backgroundColor: secondaryColor?.hex }}
+                      />
+                    </div>
+                    <div className="flex-grow">
+                      <div className="font-semibold text-gray-800">{preset.name}</div>
+                    </div>
+                    <SparklesIcon className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -837,10 +1181,47 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
           </div>
         )}
 
+        {/* Color Mode Selection */}
+        <div className="mb-6">
+          <h4 className="text-md font-semibold text-gray-700 mb-3">配色パターン</h4>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => setColorMode('single')}
+              className={`px-4 py-2 rounded-lg border-2 font-medium transition-all ${
+                colorMode === 'single'
+                  ? 'border-green-600 bg-green-50 text-green-700'
+                  : 'border-gray-300 text-gray-700 hover:border-green-400'
+              }`}
+            >
+              1色
+            </button>
+            <button
+              onClick={() => setColorMode('two_tone_horizontal')}
+              className={`px-4 py-2 rounded-lg border-2 font-medium transition-all ${
+                colorMode === 'two_tone_horizontal'
+                  ? 'border-green-600 bg-green-50 text-green-700'
+                  : 'border-gray-300 text-gray-700 hover:border-green-400'
+              }`}
+            >
+              上下2色
+            </button>
+            <button
+              onClick={() => setColorMode('two_tone_vertical')}
+              className={`px-4 py-2 rounded-lg border-2 font-medium transition-all ${
+                colorMode === 'two_tone_vertical'
+                  ? 'border-green-600 bg-green-50 text-green-700'
+                  : 'border-gray-300 text-gray-700 hover:border-green-400'
+              }`}
+            >
+              左右2色
+            </button>
+          </div>
+        </div>
+
         <div>
           <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
             <SwatchIcon className="w-5 h-5 text-green-600" />
-            外壁の色を選択
+            {colorMode !== 'single' ? '第1の色（主要部分）' : '外壁の色を選択'}
           </h4>
 
           {/* Preset Color Palette */}
@@ -850,7 +1231,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
               {EXTERIOR_COLORS.map((color) => (
                 <button
                   key={color.id}
-                  onClick={() => setSelectedExteriorColor(color.id === selectedExteriorColor ? '' : color.id)}
+                  onClick={() => handlePresetColorSelect(color.id)}
                   className={`relative aspect-square rounded-lg border-2 transition-all ${
                     selectedExteriorColor === color.id
                       ? 'border-green-600 ring-2 ring-green-300 scale-105'
@@ -973,6 +1354,142 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
           </div>
         </div>
 
+        {/* Second Color (Two-Tone Only) */}
+        {colorMode !== 'single' && (
+          <div className="border-t pt-6">
+            <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <SwatchIcon className="w-5 h-5 text-orange-600" />
+              第2の色（{colorMode === 'two_tone_horizontal' ? '下部' : '右側'}）
+            </h4>
+
+            {/* Secondary Preset Color Palette */}
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">プリセットカラー（10色）</p>
+              <div className="grid grid-cols-5 gap-2">
+                {EXTERIOR_COLORS.map((color) => (
+                  <button
+                    key={color.id}
+                    onClick={() => handleSecondaryPresetColorSelect(color.id)}
+                    className={`relative aspect-square rounded-lg border-2 transition-all ${
+                      secondaryColor === color.id
+                        ? 'border-orange-600 ring-2 ring-orange-300 scale-105'
+                        : 'border-gray-300 hover:border-orange-400'
+                    }`}
+                    style={{ backgroundColor: color.hex }}
+                    title={color.name}
+                  >
+                    {secondaryColor === color.id && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Secondary RGB Color Picker */}
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-3">カスタムカラー（RGB調整）</p>
+              <div className="space-y-3">
+                {/* R Slider */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-sm text-gray-600">R (赤)</label>
+                    <span className="text-sm font-semibold text-red-600">{secondaryR}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="255"
+                    value={secondaryR}
+                    onChange={(e) => {
+                      setSecondaryR(Number(e.target.value));
+                      setSecondaryColor('');
+                    }}
+                    className="w-full h-2 bg-gradient-to-r from-black via-red-500 to-red-600 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                {/* G Slider */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-sm text-gray-600">G (緑)</label>
+                    <span className="text-sm font-semibold text-green-600">{secondaryG}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="255"
+                    value={secondaryG}
+                    onChange={(e) => {
+                      setSecondaryG(Number(e.target.value));
+                      setSecondaryColor('');
+                    }}
+                    className="w-full h-2 bg-gradient-to-r from-black via-green-500 to-green-600 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                {/* B Slider */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-sm text-gray-600">B (青)</label>
+                    <span className="text-sm font-semibold text-blue-600">{secondaryB}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="255"
+                    value={secondaryB}
+                    onChange={(e) => {
+                      setSecondaryB(Number(e.target.value));
+                      setSecondaryColor('');
+                    }}
+                    className="w-full h-2 bg-gradient-to-r from-black via-blue-500 to-blue-600 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                {/* Color Preview */}
+                <div className="mt-4 pt-4 border-t border-gray-300">
+                  <p className="text-sm text-gray-600 mb-2">プレビュー</p>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-20 h-20 rounded-lg border-2 border-gray-300 shadow-md"
+                      style={{ backgroundColor: rgbToHex(secondaryR, secondaryG, secondaryB) }}
+                    />
+                    <div className="text-sm">
+                      <p className="text-gray-700">RGB: <span className="font-mono font-semibold">({secondaryR}, {secondaryG}, {secondaryB})</span></p>
+                      <p className="text-gray-700">HEX: <span className="font-mono font-semibold">{rgbToHex(secondaryR, secondaryG, secondaryB)}</span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Split Ratio Selection */}
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">分割比率</p>
+              <div className="grid grid-cols-3 gap-2">
+                {SPLIT_RATIOS.map((ratio) => (
+                  <button
+                    key={ratio.value}
+                    onClick={() => setSplitRatio(ratio.value)}
+                    className={`px-3 py-2 text-sm rounded-lg border-2 font-medium transition-all ${
+                      splitRatio === ratio.value
+                        ? 'border-orange-600 bg-orange-50 text-orange-700'
+                        : 'border-gray-300 text-gray-700 hover:border-orange-400'
+                    }`}
+                  >
+                    {ratio.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div>
           <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
             <CubeIcon className="w-5 h-5 text-green-600" />
@@ -1021,6 +1538,19 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
       </div>
     );
 
+    const renderProductsTab = () => (
+      <div className="space-y-6">
+        <p className="text-sm text-gray-600">
+          塗料商品データベースと連携し、実際の塗料でシミュレーションできます。
+        </p>
+        <div className="text-center py-12 text-gray-500">
+          <BuildingStorefrontIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+          <p className="font-semibold">商品タブは実装中です</p>
+          <p className="text-sm mt-2">商品データベースから塗料を選択してシミュレーションする機能を準備しています。</p>
+        </div>
+      </div>
+    );
+
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-gray-800">外壁塗装シミュレーション</h3>
@@ -1046,6 +1576,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
         <div className="pt-2">
           {exteriorPaintingActiveTab === 'easy' && renderEasyTab()}
           {exteriorPaintingActiveTab === 'detailed' && renderDetailedTab()}
+          {exteriorPaintingActiveTab === 'products' && renderProductsTab()}
         </div>
       </div>
     );

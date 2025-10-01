@@ -120,3 +120,21 @@ export interface ExteriorMaterialOption {
   name: string;
   promptFragment: string;
 }
+
+export type ColorMode = 'single' | 'two_tone_horizontal' | 'two_tone_vertical';
+
+export interface TwoToneColorConfig {
+  mode: ColorMode;
+  primaryColor: string;  // Color ID or 'custom'
+  primaryRgb: { r: number; g: number; b: number };
+  secondaryColor: string; // Color ID or 'custom'
+  secondaryRgb: { r: number; g: number; b: number };
+  splitRatio: number; // 30, 50, or 70 (percentage for primary color area)
+}
+
+export interface PaintProduct extends RegisteredProduct {
+  manufacturer?: string;
+  grade?: string; // 'silicon' | 'fluorine' | 'inorganic' | 'heat_shield'
+  durability?: number; // Years
+  pricePerSqm?: number; // Price per square meter
+}
