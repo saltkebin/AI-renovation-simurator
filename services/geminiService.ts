@@ -102,86 +102,92 @@ export const generateRenovationImage = async (
  * @param targetHeight The height of the target canvas.
  * @returns A promise that resolves with the base64 data and mime type of the processed image.
  */
-const processProductImage = (
+const processProductImage = async (
     productSrc: string,
     targetWidth: number,
     targetHeight: number
 ): Promise<{ data: string, mimeType: string }> => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
+    try {
+        // Use fetch to bypass CORS issues with Firebase Storage
+        console.log("Fetching product image via fetch API:", productSrc);
+        const response = await fetch(productSrc, {
+            mode: 'cors',
+            credentials: 'omit'
+        });
 
-        // Set crossOrigin before setting src to avoid tainted canvas
-        img.crossOrigin = "anonymous";
-
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            const ctx = canvas.getContext('2d');
-
-            if (!ctx) {
-                return reject(new Error('Failed to get canvas context'));
-            }
-
-            // Make canvas transparent
-            ctx.clearRect(0, 0, targetWidth, targetHeight);
-
-            const canvasAspect = targetWidth / targetHeight;
-            const imageAspect = img.naturalWidth / img.naturalHeight;
-
-            let drawWidth, drawHeight, x, y;
-
-            if (imageAspect > canvasAspect) {
-                // Image is wider than canvas aspect ratio
-                drawWidth = targetWidth;
-                drawHeight = targetWidth / imageAspect;
-                x = 0;
-                y = (targetHeight - drawHeight) / 2;
-            } else {
-                // Image is taller or same aspect ratio
-                drawHeight = targetHeight;
-                drawWidth = targetHeight * imageAspect;
-                y = 0;
-                x = (targetWidth - drawWidth) / 2;
-            }
-            
-            ctx.drawImage(img, x, y, drawWidth, drawHeight);
-
-            // Use PNG to support transparency
-            const dataUrl = canvas.toDataURL('image/png');
-            const mimeType = 'image/png';
-            const data = dataUrl.split(',')[1];
-            
-            if (!data) {
-                return reject(new Error('Failed to create data URL from canvas'));
-            }
-
-            resolve({ data, mimeType });
-        };
-        img.onerror = (err) => {
-            console.error("Failed to load product image for processing:", {
-                productSrc,
-                error: err,
-                crossOrigin: img.crossOrigin,
-                timestamp: new Date().toISOString()
-            });
-
-            // Simply reject without CORS retry since we're not using crossOrigin
-            console.log("Image loading failed, no crossOrigin set");
-
-            reject(new Error(`Failed to load product image from: ${productSrc}`));
-        };
-
-        // Add CORS-friendly parameters to Firebase Storage URL if needed
-        let corsEnabledSrc = productSrc;
-        if (productSrc.includes('firebasestorage.googleapis.com')) {
-            const url = new URL(productSrc);
-            url.searchParams.set('cors', 'true');
-            corsEnabledSrc = url.toString();
+        if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
         }
 
-        img.src = corsEnabledSrc;
-    });
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+
+            img.onload = () => {
+                // Clean up object URL
+                URL.revokeObjectURL(objectUrl);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+
+                if (!ctx) {
+                    return reject(new Error('Failed to get canvas context'));
+                }
+
+                // Make canvas transparent
+                ctx.clearRect(0, 0, targetWidth, targetHeight);
+
+                const canvasAspect = targetWidth / targetHeight;
+                const imageAspect = img.naturalWidth / img.naturalHeight;
+
+                let drawWidth, drawHeight, x, y;
+
+                if (imageAspect > canvasAspect) {
+                    // Image is wider than canvas aspect ratio
+                    drawWidth = targetWidth;
+                    drawHeight = targetWidth / imageAspect;
+                    x = 0;
+                    y = (targetHeight - drawHeight) / 2;
+                } else {
+                    // Image is taller or same aspect ratio
+                    drawHeight = targetHeight;
+                    drawWidth = targetHeight * imageAspect;
+                    y = 0;
+                    x = (targetWidth - drawWidth) / 2;
+                }
+
+                ctx.drawImage(img, x, y, drawWidth, drawHeight);
+
+                // Use PNG to support transparency
+                const dataUrl = canvas.toDataURL('image/png');
+                const mimeType = 'image/png';
+                const data = dataUrl.split(',')[1];
+
+                if (!data) {
+                    return reject(new Error('Failed to create data URL from canvas'));
+                }
+
+                console.log("Successfully processed product image");
+                resolve({ data, mimeType });
+            };
+
+            img.onerror = (err) => {
+                URL.revokeObjectURL(objectUrl);
+                console.error("Failed to load fetched image:", err);
+                reject(new Error('Failed to load fetched product image'));
+            };
+
+            img.src = objectUrl;
+        });
+
+    } catch (error) {
+        console.error("Error in processProductImage:", error);
+        throw new Error(`Failed to process product image: ${error instanceof Error ? error.message : String(error)}`);
+    }
 };
 
 export const generateRenovationWithProducts = async (
