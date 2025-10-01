@@ -109,38 +109,65 @@ const processProductImage = async (
 ): Promise<{ data: string, mimeType: string }> => {
     console.log("Processing product image:", productSrc);
 
-    // Simple approach: Skip image processing and return a placeholder
-    // This bypasses all CORS issues by not using the actual product image
-    return new Promise((resolve) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-        const ctx = canvas.getContext('2d');
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous'; // Enable CORS for Firebase Storage
 
-        if (!ctx) {
-            throw new Error('Failed to get canvas context');
-        }
+        img.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
 
-        // Create a simple placeholder image (transparent background with border)
-        ctx.clearRect(0, 0, targetWidth, targetHeight);
+                if (!ctx) {
+                    throw new Error('Failed to get canvas context');
+                }
 
-        // Draw a simple border to indicate where the product would be
-        ctx.strokeStyle = '#ddd';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(10, 10, targetWidth - 20, targetHeight - 20);
+                // Clear canvas with transparent background
+                ctx.clearRect(0, 0, targetWidth, targetHeight);
 
-        // Add "Product" text
-        ctx.fillStyle = '#999';
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Product', targetWidth / 2, targetHeight / 2);
+                // Calculate scaling to fit image within target dimensions while maintaining aspect ratio
+                const imgAspectRatio = img.naturalWidth / img.naturalHeight;
+                const targetAspectRatio = targetWidth / targetHeight;
 
-        const dataUrl = canvas.toDataURL('image/png');
-        const mimeType = 'image/png';
-        const data = dataUrl.split(',')[1];
+                let drawWidth, drawHeight, offsetX, offsetY;
 
-        console.log("Created placeholder for product image");
-        resolve({ data: data!, mimeType });
+                if (imgAspectRatio > targetAspectRatio) {
+                    // Image is wider than target - fit by width
+                    drawWidth = targetWidth;
+                    drawHeight = targetWidth / imgAspectRatio;
+                    offsetX = 0;
+                    offsetY = (targetHeight - drawHeight) / 2;
+                } else {
+                    // Image is taller than target - fit by height
+                    drawHeight = targetHeight;
+                    drawWidth = targetHeight * imgAspectRatio;
+                    offsetX = (targetWidth - drawWidth) / 2;
+                    offsetY = 0;
+                }
+
+                // Draw the image centered on the canvas
+                ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+                const dataUrl = canvas.toDataURL('image/png');
+                const mimeType = 'image/png';
+                const data = dataUrl.split(',')[1];
+
+                console.log("Successfully processed product image");
+                resolve({ data: data!, mimeType });
+            } catch (error) {
+                console.error("Error processing image on canvas:", error);
+                reject(error);
+            }
+        };
+
+        img.onerror = (error) => {
+            console.error("Failed to load product image:", error);
+            reject(new Error(`Failed to load product image: ${productSrc}`));
+        };
+
+        img.src = productSrc;
     });
 };
 
