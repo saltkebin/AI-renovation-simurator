@@ -1,4 +1,4 @@
-import type { RenovationCategory, RenovationStyle, FurnitureStyle, RoomType, ArchOption, SketchCategory, SketchFinetuneTab, SketchFinetuneOption } from './types';
+import type { RenovationCategory, RenovationStyle, FurnitureStyle, RoomType, ArchOption, SketchCategory, SketchFinetuneTab, SketchFinetuneOption, ExteriorColorOption, ExteriorMaterialOption } from './types';
 import { PaintBrushIcon, SwatchIcon, CubeIcon, EyeIcon, HomeModernIcon, EditIcon, UserGroupIcon, SunIcon, PhotoIcon } from './components/Icon';
 
 export const OMAKASE_PROMPT = "この部屋の雰囲気を分析し、あなたの美的センスで最も魅力的になるように全面的にリノベーションしてください。スタイルやテーマは自由にお任せします。";
@@ -275,4 +275,28 @@ export const SKETCH_FINETUNE_TABS: SketchFinetuneTab[] = [
   { id: 'time', name: '時間帯・天候', icon: SunIcon, options: SKETCH_TIME_OPTIONS },
   { id: 'scenery', name: '風景', icon: PhotoIcon, options: SKETCH_SCENERY_OPTIONS },
   { id: 'person', name: '人物', icon: UserGroupIcon },
+];
+
+// Exterior painting colors
+export const EXTERIOR_COLORS: ExteriorColorOption[] = [
+  { id: 'white', name: 'ホワイト', hex: '#FFFFFF' },
+  { id: 'cream', name: 'クリーム', hex: '#FFF8DC' },
+  { id: 'beige', name: 'ベージュ', hex: '#F5E6D3' },
+  { id: 'light_gray', name: 'ライトグレー', hex: '#D3D3D3' },
+  { id: 'gray', name: 'グレー', hex: '#9E9E9E' },
+  { id: 'dark_gray', name: 'ダークグレー', hex: '#5A5A5A' },
+  { id: 'brown', name: 'ブラウン', hex: '#8B4513' },
+  { id: 'navy', name: 'ネイビー', hex: '#1A237E' },
+  { id: 'green', name: 'グリーン', hex: '#4A7C59' },
+  { id: 'black', name: 'ブラック', hex: '#2C2C2C' },
+];
+
+// Exterior materials
+export const EXTERIOR_MATERIALS: ExteriorMaterialOption[] = [
+  { id: 'siding', name: 'サイディング', promptFragment: '外壁をモダンなサイディングに変更してください。清潔感のある仕上がりにしてください。' },
+  { id: 'stucco', name: '塗り壁', promptFragment: '外壁を質感のある塗り壁仕上げに変更してください。職人の手仕事が感じられる風合いにしてください。' },
+  { id: 'tile', name: 'タイル', promptFragment: '外壁を高級感のあるタイル張りに変更してください。' },
+  { id: 'wood', name: '木材', promptFragment: '外壁を温かみのある木材仕上げに変更してください。ナチュラルな風合いにしてください。' },
+  { id: 'concrete', name: 'コンクリート', promptFragment: '外壁をコンクリート打ちっぱなし風に変更してください。モダンで無機質な印象にしてください。' },
+  { id: 'brick', name: 'レンガ', promptFragment: '外壁をレンガ調に変更してください。クラシックで重厚感のある仕上がりにしてください。' },
 ];

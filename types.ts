@@ -2,7 +2,10 @@
 import type React from 'react';
 
 // FIX: Add AppMode type to be shared across components.
-export type AppMode = 'renovation' | 'sketch2arch';
+export type AppMode = 'renovation' | 'exterior';
+
+// Exterior mode sub-modes
+export type ExteriorSubMode = 'sketch2arch' | 'exterior_painting';
 
 export interface GeneratedImage {
   src: string;
@@ -103,4 +106,17 @@ export interface SketchFinetuneTab {
   name: string;
   icon: React.FC<React.SVGProps<SVGSVGElement>>;
   options?: SketchFinetuneOption[];
+}
+
+// Exterior painting types
+export interface ExteriorColorOption {
+  id: string;
+  name: string;
+  hex: string;
+}
+
+export interface ExteriorMaterialOption {
+  id: string;
+  name: string;
+  promptFragment: string;
 }

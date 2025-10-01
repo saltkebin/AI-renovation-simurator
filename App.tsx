@@ -11,7 +11,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import DatabasePage from './components/DatabasePage';
 import PinAuth from './components/PinAuth'; // Import the PinAuth component
 import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts } from './services/geminiService';
-import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory } from './types';
+import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory, ExteriorSubMode } from './types';
 import { RENOVATION_PROMPTS, OMAKASE_PROMPT } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
 import { db, verifyPin } from './services/firebase'; // Import verifyPin
@@ -46,6 +46,7 @@ const App: React.FC = () => {
   const [displayAspectRatio, setDisplayAspectRatio] = useState<string>('auto');
   const [originalImageAspectRatio, setOriginalImageAspectRatio] = useState<string>('4:3');
   const [appMode, setAppMode] = useState<AppMode>('renovation');
+  const [exteriorSubMode, setExteriorSubMode] = useState<ExteriorSubMode>('sketch2arch');
   const [appView, setAppView] = useState<AppView>('main');
   const [modalInfo, setModalInfo] = useState<ModalInfo | null>(null);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -250,9 +251,13 @@ const App: React.FC = () => {
         }
         result = await generateRenovationWithProducts(base64Data, mimeType, products, promptOrStyle, originalImageAspectRatio);
         description = undefined;
-      } else if (appMode === 'sketch2arch' && !isFinetuningMode) {
+      } else if (appMode === 'exterior' && exteriorSubMode === 'sketch2arch' && !isFinetuningMode) {
         result = await generateArchFromSketch(base64Data, mimeType, promptOrStyle);
         description = `スケッチから生成: ${promptOrStyle}`;
+      } else if (appMode === 'exterior' && exteriorSubMode === 'exterior_painting') {
+        // Exterior painting mode - will be implemented in next step
+        result = await generateRenovationImage(base64Data, mimeType, promptOrStyle, originalImageAspectRatio, false);
+        description = undefined;
       } else {
         const isOmakase = promptOrStyle === OMAKASE_PROMPT;
         const prompt = mode === 'oneClick' 
@@ -582,7 +587,7 @@ const App: React.FC = () => {
 
   const ModeSelector = () => (
     <div className="mb-6 flex justify-center items-center p-1.5 rounded-xl bg-gray-200 gap-2">
-      <button 
+      <button
         onClick={() => handleAppModeChange('renovation')}
         disabled={isLoading}
         className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all w-1/2 justify-center ${appMode === 'renovation' ? 'bg-white text-gray-800 shadow-md' : 'bg-transparent text-gray-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -591,12 +596,12 @@ const App: React.FC = () => {
         リノベーション
       </button>
       <button
-        onClick={() => handleAppModeChange('sketch2arch')}
+        onClick={() => handleAppModeChange('exterior')}
         disabled={isLoading}
-        className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all w-1/2 justify-center ${appMode === 'sketch2arch' ? 'bg-white text-gray-800 shadow-md' : 'bg-transparent text-gray-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all w-1/2 justify-center ${appMode === 'exterior' ? 'bg-white text-gray-800 shadow-md' : 'bg-transparent text-gray-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         <PencilIcon className="w-5 h-5" />
-        スケッチ → パース
+        外観デザイン
       </button>
     </div>
   );
@@ -629,7 +634,7 @@ const App: React.FC = () => {
           {originalImage && <ModeSelector />}
 
           {/* Mobile: Image display area */}
-          <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 mb-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' :'bg-white'}`}>
+          <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 mb-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
             {isLoading && <Loader messages={appMode === 'renovation' ? renovationLoadingMessages : sketchLoadingMessages} />}
             {!isLoading && error && !isQuotationMode && (
               <ErrorDisplay error={error} />
@@ -679,19 +684,19 @@ const App: React.FC = () => {
                       </div>
                     )}
                   </>
-                ) : ( // sketch2arch mode view
+                ) : ( // exterior mode view
                   <div className="w-full max-w-6xl mx-auto">
                     <div className="flex flex-col md:flex-row gap-4 items-start">
                       <div className="w-full md:w-1/2">
-                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">オリジナルスケッチ</h3>
+                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">{exteriorSubMode === 'sketch2arch' ? 'オリジナルスケッチ' : '変更前'}</h3>
                         <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
-                          <img src={originalImage} alt="オリジナルスケッチ" className="absolute inset-0 w-full h-full object-contain" />
+                          <img src={originalImage} alt="変更前" className="absolute inset-0 w-full h-full object-contain" />
                         </div>
                       </div>
                       <div className="w-full md:w-1/2">
-                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">生成されたパース</h3>
+                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">{exteriorSubMode === 'sketch2arch' ? '生成されたパース' : '変更後'}</h3>
                         <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
-                          <img src={activeGeneratedImage.src} alt="生成されたパース" className="absolute inset-0 w-full h-full object-contain" />
+                          <img src={activeGeneratedImage.src} alt="変更後" className="absolute inset-0 w-full h-full object-contain" />
                         </div>
                       </div>
                     </div>
@@ -758,12 +763,12 @@ const App: React.FC = () => {
               generatedImages={generatedImages}
               activeImage={activeGeneratedImage?.src ?? null}
               onSelect={handleHistorySelect}
-              originalImageLabel={appMode === 'sketch2arch' ? 'スケッチ' : 'オリジナル'}
+              originalImageLabel={appMode === 'exterior' && exteriorSubMode === 'sketch2arch' ? 'スケッチ' : 'オリジナル'}
             />
           )}
 
           {/* Mobile: Control panel */}
-          <div className={`rounded-xl shadow-lg p-6 space-y-6 mt-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' : 'bg-white'}`}>
+          <div className={`rounded-xl shadow-lg p-6 space-y-6 mt-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
             {isQuotationMode ? (
               <QuotationPanel
                 onGetQuote={handleGetQuote}
@@ -794,6 +799,8 @@ const App: React.FC = () => {
                     <h2 className="text-xl font-bold text-gray-700 pt-4">2. モードを選択</h2>
                     <RenovationPanel
                       appMode={appMode}
+                      exteriorSubMode={exteriorSubMode}
+                      onExteriorSubModeChange={setExteriorSubMode}
                       onGenerate={handleGenerate}
                       isDisabled={isLoading}
                       activeImage={isFinetuningMode && activeGeneratedImage ? activeGeneratedImage.src : originalImage}
@@ -813,7 +820,7 @@ const App: React.FC = () => {
         {/* Desktop: Original layout */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-8 lg:items-start">
           <div className="lg:col-span-4 xl:col-span-3">
-            <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' : 'bg-white'}`}>
+            <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
               {isQuotationMode ? (
                 <QuotationPanel
                   onGetQuote={handleGetQuote}
@@ -844,6 +851,8 @@ const App: React.FC = () => {
                       <h2 className="text-xl font-bold text-gray-700 pt-4">2. モードを選択</h2>
                       <RenovationPanel
                         appMode={appMode}
+                        exteriorSubMode={exteriorSubMode}
+                        onExteriorSubModeChange={setExteriorSubMode}
                         onGenerate={handleGenerate}
                         isDisabled={isLoading}
                         activeImage={isFinetuningMode && activeGeneratedImage ? activeGeneratedImage.src : originalImage}
@@ -861,7 +870,7 @@ const App: React.FC = () => {
           </div>
           <div className="lg:col-span-8 xl:col-span-9">
            {originalImage && <ModeSelector />}
-            <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'sketch2arch' ? 'bg-blue-50' :'bg-white'}`}>
+            <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
             {isLoading && <Loader messages={appMode === 'renovation' ? renovationLoadingMessages : sketchLoadingMessages} />}
             {!isLoading && error && !isQuotationMode && (
               <ErrorDisplay error={error} />
@@ -911,19 +920,19 @@ const App: React.FC = () => {
                       </div>
                     )}
                   </>
-                ) : ( // sketch2arch mode view
+                ) : ( // exterior mode view
                   <div className="w-full max-w-6xl mx-auto">
                     <div className="flex flex-col md:flex-row gap-4 items-start">
                       <div className="w-full md:w-1/2">
-                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">オリジナルスケッチ</h3>
+                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">{exteriorSubMode === 'sketch2arch' ? 'オリジナルスケッチ' : '変更前'}</h3>
                         <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
-                          <img src={originalImage} alt="オリジナルスケッチ" className="absolute inset-0 w-full h-full object-contain" />
+                          <img src={originalImage} alt="変更前" className="absolute inset-0 w-full h-full object-contain" />
                         </div>
                       </div>
                       <div className="w-full md:w-1/2">
-                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">生成されたパース</h3>
+                        <h3 className="text-center text-lg font-bold mb-2 text-blue-800">{exteriorSubMode === 'sketch2arch' ? '生成されたパース' : '変更後'}</h3>
                         <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
-                          <img src={activeGeneratedImage.src} alt="生成されたパース" className="absolute inset-0 w-full h-full object-contain" />
+                          <img src={activeGeneratedImage.src} alt="変更後" className="absolute inset-0 w-full h-full object-contain" />
                         </div>
                       </div>
                     </div>
@@ -990,7 +999,7 @@ const App: React.FC = () => {
               generatedImages={generatedImages}
               activeImage={activeGeneratedImage?.src ?? null}
               onSelect={handleHistorySelect}
-              originalImageLabel={appMode === 'sketch2arch' ? 'スケッチ' : 'オリジナル'}
+              originalImageLabel={appMode === 'exterior' && exteriorSubMode === 'sketch2arch' ? 'スケッチ' : 'オリジナル'}
             />
           )}
           </div>
