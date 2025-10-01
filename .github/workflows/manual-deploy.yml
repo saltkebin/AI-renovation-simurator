@@ -18,6 +18,7 @@ on:
         options:
           - default
           - hitotoiro
+          - ishibashihome
           # Add new client names here
 
 jobs:
