@@ -110,8 +110,8 @@ const processProductImage = (
     return new Promise((resolve, reject) => {
         const img = new Image();
 
-        // Try with crossOrigin first, fallback without it if needed
-        img.crossOrigin = "anonymous";
+        // Firebase Storage doesn't need crossOrigin for same-origin requests
+        // img.crossOrigin = "anonymous";
 
         img.onload = () => {
             const canvas = document.createElement('canvas');
@@ -166,19 +166,8 @@ const processProductImage = (
                 timestamp: new Date().toISOString()
             });
 
-            // Retry without crossOrigin if it was set
-            if (img.crossOrigin) {
-                console.log("Retrying image load without crossOrigin...");
-                const retryImg = new Image();
-                retryImg.onload = () => {
-                    img.onload?.call(retryImg);
-                };
-                retryImg.onerror = () => {
-                    reject(new Error(`Failed to load product image from: ${productSrc} (even without CORS)`));
-                };
-                retryImg.src = productSrc;
-                return;
-            }
+            // Simply reject without CORS retry since we're not using crossOrigin
+            console.log("Image loading failed, no crossOrigin set");
 
             reject(new Error(`Failed to load product image from: ${productSrc}`));
         };
