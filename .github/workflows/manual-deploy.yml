@@ -81,6 +81,15 @@ jobs:
             exit 1
           fi
 
+          # Debug: Show raw config JSON (first 100 chars for security)
+          echo "DEBUG: CONFIG_JSON (first 100 chars): $(echo "$CONFIG_JSON" | head -c 100)..."
+          echo "DEBUG: CONFIG_JSON length: ${#CONFIG_JSON}"
+
+          # Test jq parsing
+          echo "DEBUG: Testing jq parsing..."
+          PROJECT_ID_TEST=$(echo "$CONFIG_JSON" | jq -r .projectId 2>&1)
+          echo "DEBUG: jq projectId result: $PROJECT_ID_TEST"
+
           # Parse Firebase config and set environment variables
           echo "VITE_GEMINI_API_KEY=$GEMINI_KEY" >> $GITHUB_ENV
           echo "VITE_FIREBASE_API_KEY=$(echo $CONFIG_JSON | jq -r .apiKey)" >> $GITHUB_ENV
