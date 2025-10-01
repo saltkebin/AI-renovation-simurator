@@ -61,6 +61,9 @@ jobs:
           elif [ "$CLIENT_UPPER" = "HITOTOIRO" ]; then
             CONFIG_JSON='${{ secrets.FIREBASE_CONFIG_HITOTOIRO }}'
             GEMINI_KEY='${{ secrets.GEMINI_API_KEY_HITOTOIRO }}'
+          elif [ "$CLIENT_UPPER" = "ISHIBASHIHOME" ]; then
+            CONFIG_JSON='${{ secrets.FIREBASE_CONFIG_ISHIBASHIHOME }}'
+            GEMINI_KEY='${{ secrets.GEMINI_API_KEY_ISHIBASHIHOME }}'
           else
             echo "ERROR: Unknown client ${{ github.event.inputs.client }}. Please add configuration for this client." >&2
             exit 1
