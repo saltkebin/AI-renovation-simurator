@@ -109,7 +109,10 @@ const processProductImage = (
 ): Promise<{ data: string, mimeType: string }> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = "anonymous"; // Allow cross-origin loading
+
+        // Try with crossOrigin first, fallback without it if needed
+        img.crossOrigin = "anonymous";
+
         img.onload = () => {
             const canvas = document.createElement('canvas');
             canvas.width = targetWidth;
@@ -156,8 +159,28 @@ const processProductImage = (
             resolve({ data, mimeType });
         };
         img.onerror = (err) => {
-            console.error("Failed to load product image for processing:", productSrc, err);
-            reject(new Error('Failed to load product image'));
+            console.error("Failed to load product image for processing:", {
+                productSrc,
+                error: err,
+                crossOrigin: img.crossOrigin,
+                timestamp: new Date().toISOString()
+            });
+
+            // Retry without crossOrigin if it was set
+            if (img.crossOrigin) {
+                console.log("Retrying image load without crossOrigin...");
+                const retryImg = new Image();
+                retryImg.onload = () => {
+                    img.onload?.call(retryImg);
+                };
+                retryImg.onerror = () => {
+                    reject(new Error(`Failed to load product image from: ${productSrc} (even without CORS)`));
+                };
+                retryImg.src = productSrc;
+                return;
+            }
+
+            reject(new Error(`Failed to load product image from: ${productSrc}`));
         };
         img.src = productSrc;
     });
