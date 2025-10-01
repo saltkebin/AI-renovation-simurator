@@ -323,19 +323,28 @@ https://airenovation-[client].web.app
 
 ### 🚀 自動化スクリプトを使用（推奨）
 
+**📖 詳細な手順は [`docs/CLIENT_SETUP_GUIDE.md`](docs/CLIENT_SETUP_GUIDE.md) を参照**
+
 ```bash
 # 新規クライアント完全セットアップ
 ./scripts/setup-new-client.sh <client-name> <firebase-project-id>
 
-# 例:
-./scripts/setup-new-client.sh newclient airenovation-newclient
+# 例: "client-a" を追加する場合
+./scripts/setup-new-client.sh client-a airenovation-client-a
 ```
 
+**完全手順（14分）：**
+1. Firebase準備（手動・5分）
+2. GitHub Secrets設定（手動・3分）
+3. 自動化スクリプト実行（自動・2分）
+4. 最終設定（手動・2分）
+5. デプロイ&テスト（自動・2分）
+
 このスクリプトが自動実行：
-1. GitHub Actions workflows更新
-2. CORS設定適用
-3. ドキュメント更新
-4. Git commit
+- GitHub Actions workflows更新
+- CORS設定適用
+- ドキュメント更新
+- Git commit
 
 ### 🔧 手動実行の場合
 
@@ -347,4 +356,4 @@ https://airenovation-[client].web.app
 5. デプロイ実行
 6. セキュリティ設定
 
-**12分で新規クライアント環境構築完了！**
+**従来30分 → 自動化後14分で新規クライアント環境構築完了！**
