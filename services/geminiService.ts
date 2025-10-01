@@ -110,8 +110,8 @@ const processProductImage = (
     return new Promise((resolve, reject) => {
         const img = new Image();
 
-        // Firebase Storage doesn't need crossOrigin for same-origin requests
-        // img.crossOrigin = "anonymous";
+        // Set crossOrigin before setting src to avoid tainted canvas
+        img.crossOrigin = "anonymous";
 
         img.onload = () => {
             const canvas = document.createElement('canvas');
@@ -171,7 +171,16 @@ const processProductImage = (
 
             reject(new Error(`Failed to load product image from: ${productSrc}`));
         };
-        img.src = productSrc;
+
+        // Add CORS-friendly parameters to Firebase Storage URL if needed
+        let corsEnabledSrc = productSrc;
+        if (productSrc.includes('firebasestorage.googleapis.com')) {
+            const url = new URL(productSrc);
+            url.searchParams.set('cors', 'true');
+            corsEnabledSrc = url.toString();
+        }
+
+        img.src = corsEnabledSrc;
     });
 };
 
