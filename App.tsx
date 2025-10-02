@@ -670,7 +670,7 @@ const App: React.FC = () => {
           {originalImage && <ModeSelector />}
 
           {/* Mobile: Image display area */}
-          <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 mb-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
+          <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 mb-8 transition-colors duration-300 ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
             {isLoading && <Loader messages={
               appMode === 'renovation'
                 ? renovationLoadingMessages
@@ -841,7 +841,7 @@ const App: React.FC = () => {
           )}
 
           {/* Mobile: Control panel */}
-          <div className={`rounded-xl shadow-lg p-6 space-y-6 mt-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
+          <div className={`rounded-xl shadow-lg p-6 space-y-6 mt-8 transition-colors duration-300 ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
             {isQuotationMode ? (
               <QuotationPanel
                 appMode={appMode}
@@ -895,7 +895,7 @@ const App: React.FC = () => {
         {/* Desktop: Original layout */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-8 lg:items-start">
           <div className="lg:col-span-4 xl:col-span-3">
-            <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
+            <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
               {isQuotationMode ? (
                 <QuotationPanel
                   appMode={appMode}
@@ -945,9 +945,9 @@ const App: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="lg:col-span-8 xl:col-span-9 sticky top-8 self-start max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <div className="lg:col-span-8 xl:col-span-9 sticky top-8 self-start">
            {originalImage && <ModeSelector />}
-            <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
+            <div className={`rounded-xl shadow-lg flex items-center justify-center p-4 transition-colors duration-300 ${originalImage ? 'max-h-[calc(100vh-6rem)]' : 'min-h-[400px]'} overflow-y-auto ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
             {isLoading && <Loader messages={
               appMode === 'renovation'
                 ? renovationLoadingMessages
