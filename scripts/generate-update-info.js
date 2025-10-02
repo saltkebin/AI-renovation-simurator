@@ -54,9 +54,28 @@ function convertToUserFriendly(commit) {
 
   let title = subject;
   let description = subject;
+  let shouldInclude = true;
 
   if (match) {
     const [, type, scope, message] = match;
+
+    // Skip internal/developer-only commits
+    if (type === 'docs' || type === 'test' || type === 'chore' || type === 'refactor') {
+      shouldInclude = false;
+    }
+
+    // Skip if message contains internal keywords
+    const internalKeywords = [
+      'リファクタ', 'refactor', 'テスト', 'test',
+      'ドキュメント', 'document', 'ビルド', 'build',
+      'デバッグ', 'debug', 'ログ', 'log',
+      '依存関係', 'dependency', 'dependencies',
+      'CI/CD', 'pipeline', 'workflow'
+    ];
+
+    if (internalKeywords.some(keyword => message.toLowerCase().includes(keyword.toLowerCase()))) {
+      shouldInclude = false;
+    }
 
     title = message.trim();
 
@@ -65,15 +84,32 @@ function convertToUserFriendly(commit) {
       description = `${message}ができるようになりました。`;
     } else if (type === 'fix') {
       description = `${message}に関する問題を修正し、より使いやすくなりました。`;
-    } else if (type === 'docs') {
-      description = `${message}しました。`;
     } else if (type === 'style') {
-      description = `${message}を改善しました。`;
+      // Only include UI/UX improvements, not code style
+      if (message.toLowerCase().includes('ui') ||
+          message.toLowerCase().includes('デザイン') ||
+          message.toLowerCase().includes('表示')) {
+        description = `${message}を改善しました。`;
+      } else {
+        shouldInclude = false;
+      }
     } else {
       description = `${message}を更新しました。`;
     }
   } else {
     // No conventional format, use subject as-is
+    // Skip if contains internal keywords
+    const internalKeywords = [
+      'リファクタ', 'refactor', 'テスト', 'test',
+      'ドキュメント', 'document', 'ビルド', 'build',
+      'デバッグ', 'debug', 'ログ', 'log',
+      '依存関係', 'dependency', 'CI/CD'
+    ];
+
+    if (internalKeywords.some(keyword => subject.toLowerCase().includes(keyword.toLowerCase()))) {
+      shouldInclude = false;
+    }
+
     // Try to make it more user-friendly
     if (subject.includes('追加') || subject.includes('作成')) {
       description = `${subject}しました。`;
@@ -106,7 +142,8 @@ function convertToUserFriendly(commit) {
   return {
     date,
     title: title.trim(),
-    description: description.trim()
+    description: description.trim(),
+    shouldInclude
   };
 }
 
@@ -157,12 +194,20 @@ function main() {
 
   console.log(`\n📝 Found ${commits.length} commits:\n`);
 
-  const updates = commits.map(commit => {
-    const userFriendly = convertToUserFriendly(commit);
-    console.log(`[${userFriendly.date}] ${userFriendly.title}`);
-    console.log(`   ${userFriendly.description}\n`);
-    return userFriendly;
-  });
+  const updates = commits
+    .map(commit => convertToUserFriendly(commit))
+    .filter(update => update.shouldInclude)
+    .map(update => {
+      console.log(`[${update.date}] ${update.title}`);
+      console.log(`   ${update.description}\n`);
+      return update;
+    });
+
+  if (updates.length === 0) {
+    console.log('⚠️  No user-facing updates found in recent commits.');
+    console.log('💡 Tip: Use "feat:" or "fix:" commits for user-facing features.');
+    return;
+  }
 
   const newHistoryCode = generateUpdateHistoryCode(updates);
 
