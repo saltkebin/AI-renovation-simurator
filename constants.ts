@@ -1,4 +1,4 @@
-import type { RenovationCategory, RenovationStyle, FurnitureStyle, RoomType, ArchOption, SketchCategory, SketchFinetuneTab, SketchFinetuneOption, ExteriorColorOption, ExteriorMaterialOption } from './types';
+import type { RenovationCategory, RenovationStyle, FurnitureStyle, RoomType, ArchOption, SketchCategory, SketchFinetuneTab, SketchFinetuneOption, ExteriorColorOption, ExteriorMaterialOption, PaintType } from './types';
 import { PaintBrushIcon, SwatchIcon, CubeIcon, EyeIcon, HomeModernIcon, EditIcon, UserGroupIcon, SunIcon, PhotoIcon } from './components/Icon';
 
 export const OMAKASE_PROMPT = "この部屋の雰囲気を分析し、あなたの美的センスで最も魅力的になるように全面的にリノベーションしてください。スタイルやテーマは自由にお任せします。";
@@ -315,4 +315,41 @@ export const PAINT_CATEGORIES = [
   { id: 'fluorine', name: 'フッ素塗料' },
   { id: 'inorganic', name: '無機塗料' },
   { id: 'heat_shield', name: '遮熱塗料' },
+];
+
+// Paint types for quotation
+export const PAINT_TYPES: PaintType[] = [
+  { id: 'ai_choice', name: 'AIにおまかせ', description: '最適な塗料を自動選択' },
+  { id: 'silicon', name: 'シリコン塗料', description: '耐用年数10-15年' },
+  { id: 'fluorine', name: 'フッ素塗料', description: '耐用年数15-20年' },
+  { id: 'inorganic', name: '無機塗料', description: '耐用年数20-25年' },
+  { id: 'heat_shield', name: '遮熱塗料', description: '耐用年数12-18年' },
+  { id: 'other', name: 'その他', description: 'カスタム塗料を入力' },
+];
+
+// Update information
+// IMPORTANT: When adding new features, add an entry at the TOP of this array with today's date (YYYY-MM-DD format)
+// The date should match the date you push to git (use the current date when you add the entry)
+export interface UpdateInfo {
+  date: string; // YYYY-MM-DD format - Use the date when you push the update
+  title: string;
+  description: string;
+}
+
+export const UPDATE_HISTORY: UpdateInfo[] = [
+  {
+    date: '2025-10-02',
+    title: '外壁塗装モードの機能拡張とUI改善',
+    description: '外壁塗装モードの機能拡張とUI改善ができるようになりました。'
+  },
+  {
+    date: '2025-10-02',
+    title: '外壁塗装シミュレーション機能を実装',
+    description: '外壁塗装シミュレーション機能を実装ができるようになりました。'
+  },
+  {
+    date: '2025-10-01',
+    title: '新規クライアント追加の詳細手順ガイドを追加',
+    description: '新規クライアント追加の詳細手順ガイドを追加しました。'
+  }
 ];

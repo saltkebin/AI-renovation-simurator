@@ -292,11 +292,18 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
 
   useEffect(() => {
-    // When categories are loaded, if no category is selected or the selected one is not in the list, select the first one.
+    // When categories are loaded, if no category is selected or the selected one is not in the list, select the appropriate default.
     if (categories.length > 0 && !categories.find(c => c.id === selectedCategoryId)) {
-      setSelectedCategoryId(categories[0].id);
+      // For exterior painting mode, try to select "塗料" category by default
+      if (appMode === 'exterior' && exteriorSubMode === 'exterior_painting') {
+        const paintCategory = categories.find(c => c.name === '塗料');
+        setSelectedCategoryId(paintCategory ? paintCategory.id : categories[0].id);
+      } else {
+        // For renovation mode, select the first category
+        setSelectedCategoryId(categories[0].id);
+      }
     }
-  }, [categories, selectedCategoryId]);
+  }, [categories, selectedCategoryId, appMode, exteriorSubMode]);
 
 
   useEffect(() => {
@@ -318,6 +325,16 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
     setSketchOpenAccordion(null);
     setSketchActiveTab('easy');
   }, [appMode]);
+
+  useEffect(() => {
+    // When switching to exterior painting products tab, select "塗料" category
+    if (appMode === 'exterior' && exteriorSubMode === 'exterior_painting' && exteriorPaintingActiveTab === 'products' && categories.length > 0) {
+      const paintCategory = categories.find(c => c.name === '塗料');
+      if (paintCategory && selectedCategoryId !== paintCategory.id) {
+        setSelectedCategoryId(paintCategory.id);
+      }
+    }
+  }, [appMode, exteriorSubMode, exteriorPaintingActiveTab, categories, selectedCategoryId]);
 
   const handleGenerate = () => {
     if (customPrompt.trim()) {
@@ -780,7 +797,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   );
 
   const renderExteriorPaintingPanel = () => {
-    const OMAKASE_EXTERIOR_PROMPT = 'この建物の外観を分析し、建物の構造や形状は一切変更せず、外壁の色と素材のみを変更して、最も魅力的で調和のとれた外観デザインを提案してください。周囲の環境や建物のスタイルに合わせた配色と素材を選んでください。';
+    const OMAKASE_EXTERIOR_PROMPT = 'この建物の外観を分析し、建物の構造や形状、外壁の素材や質感は一切変更せず、外壁の色のみを変更して、最も魅力的で調和のとれた外観デザインを提案してください。周囲の環境や建物のスタイルに合わせた配色を選んでください。既存の外壁素材の質感やテクスチャは維持したまま、色だけを変更してください。';
 
     const rgbToHex = (r: number, g: number, b: number): string => {
       return '#' + [r, g, b].map(x => {
@@ -854,8 +871,9 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 - 屋根の形状、色、素材
 - 周囲の環境（植栽、地面、空、背景）
 - 建物の配置や向き
+- 外壁の素材や質感（既存のテクスチャを維持）
 
-変更してよいのは外壁の表面の色と質感のみです。外壁面だけをペイントするイメージで、以下の指示に従って変更してください。`;
+変更してよいのは外壁の表面の色のみです。外壁面だけをペイントするイメージで、既存の素材感を保ちながら色だけを変更してください。`;
 
       // Two-tone color handling
       if (colorMode === 'two_tone_horizontal') {
@@ -865,7 +883,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
         promptParts.push(`外壁を水平に2色に分けてツートンカラーにしてください：
 - 上部（建物の${splitRatio}%）: ${selectedExteriorColor ? EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor)?.name : `RGB(${customR}, ${customG}, ${customB})`}（カラーコード: ${primaryHex}）
 - 下部（建物の${100 - splitRatio}%）: ${secondaryColor ? EXTERIOR_COLORS.find(c => c.id === secondaryColor)?.name : `RGB(${secondaryR}, ${secondaryG}, ${secondaryB})`}（カラーコード: ${secondaryHex}）
-境界線は自然な水平ラインで、建物の構造に沿って区切ってください。`);
+境界線は自然な水平ラインで、建物の構造に沿って区切ってください。既存の外壁素材の質感やテクスチャは維持したまま、色だけを変更してください。`);
       } else if (colorMode === 'two_tone_vertical') {
         const primaryHex = selectedExteriorColor ? EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor)?.hex : rgbToHex(customR, customG, customB);
         const secondaryHex = secondaryColor ? EXTERIOR_COLORS.find(c => c.id === secondaryColor)?.hex : rgbToHex(secondaryR, secondaryG, secondaryB);
@@ -873,25 +891,18 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
         promptParts.push(`外壁を垂直に2色に分けてツートンカラーにしてください：
 - 左側（建物の${splitRatio}%）: ${selectedExteriorColor ? EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor)?.name : `RGB(${customR}, ${customG}, ${customB})`}（カラーコード: ${primaryHex}）
 - 右側（建物の${100 - splitRatio}%）: ${secondaryColor ? EXTERIOR_COLORS.find(c => c.id === secondaryColor)?.name : `RGB(${secondaryR}, ${secondaryG}, ${secondaryB})`}（カラーコード: ${secondaryHex}）
-境界線は自然な垂直ラインで、建物の構造に沿って区切ってください。`);
+境界線は自然な垂直ラインで、建物の構造に沿って区切ってください。既存の外壁素材の質感やテクスチャは維持したまま、色だけを変更してください。`);
       } else {
         // Single color mode
         if (selectedExteriorColor) {
           const color = EXTERIOR_COLORS.find(c => c.id === selectedExteriorColor);
           if (color) {
-            promptParts.push(`外壁の色を${color.name}（16進数カラーコード: ${color.hex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。`);
+            promptParts.push(`外壁の色を${color.name}（16進数カラーコード: ${color.hex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。既存の外壁素材の質感やテクスチャは維持したまま、色だけを変更してください。`);
           }
         } else {
           // Use custom RGB color if no preset color is selected
           const customHex = rgbToHex(customR, customG, customB);
-          promptParts.push(`外壁の色をRGB(${customR}, ${customG}, ${customB})（16進数カラーコード: ${customHex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。`);
-        }
-      }
-
-      if (selectedExteriorMaterial) {
-        const material = EXTERIOR_MATERIALS.find(m => m.id === selectedExteriorMaterial);
-        if (material) {
-          promptParts.push(material.promptFragment);
+          promptParts.push(`外壁の色をRGB(${customR}, ${customG}, ${customB})（16進数カラーコード: ${customHex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。既存の外壁素材の質感やテクスチャは維持したまま、色だけを変更してください。`);
         }
       }
 
@@ -925,7 +936,6 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
     const handlePresetGenerate = (preset: typeof exteriorPresetCategories[0]['presets'][0]) => {
       const color = EXTERIOR_COLORS.find(c => c.id === preset.color);
-      const material = EXTERIOR_MATERIALS.find(m => m.id === preset.material);
 
       let promptParts: string[] = [];
       const basePrompt = `重要な制約：この建物の外観写真について、以下の要素は絶対に変更しないでください：
@@ -936,14 +946,12 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 - 屋根の形状、色、素材
 - 周囲の環境（植栽、地面、空、背景）
 - 建物の配置や向き
+- 外壁の素材や質感（既存のテクスチャを維持）
 
-変更してよいのは外壁の表面の色と質感のみです。外壁面だけをペイントするイメージで、以下の指示に従って変更してください。`;
+変更してよいのは外壁の表面の色のみです。外壁面だけをペイントするイメージで、既存の素材感を保ちながら色だけを変更してください。`;
 
       if (color) {
-        promptParts.push(`外壁の色を${color.name}（16進数カラーコード: ${color.hex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。`);
-      }
-      if (material) {
-        promptParts.push(material.promptFragment);
+        promptParts.push(`外壁の色を${color.name}（16進数カラーコード: ${color.hex}）に変更してください。この色は外壁の表面のみに適用し、窓枠やドア、屋根には適用しないでください。既存の外壁素材の質感やテクスチャは維持したまま、色だけを変更してください。`);
       }
 
       const finalPrompt = `${basePrompt}\n\n${promptParts.join('\n\n')}`;
@@ -953,7 +961,6 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
     const handleTwoTonePresetGenerate = (preset: typeof twoTonePresets[0]) => {
       const primaryColor = EXTERIOR_COLORS.find(c => c.id === preset.primaryColor);
       const secondaryColor = EXTERIOR_COLORS.find(c => c.id === preset.secondaryColor);
-      const material = EXTERIOR_MATERIALS.find(m => m.id === preset.material);
 
       let promptParts: string[] = [];
       const basePrompt = `重要な制約：この建物の外観写真について、以下の要素は絶対に変更しないでください：
@@ -964,23 +971,20 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 - 屋根の形状、色、素材
 - 周囲の環境（植栽、地面、空、背景）
 - 建物の配置や向き
+- 外壁の素材や質感（既存のテクスチャを維持）
 
-変更してよいのは外壁の表面の色と質感のみです。外壁面だけをペイントするイメージで、以下の指示に従って変更してください。`;
+変更してよいのは外壁の表面の色のみです。外壁面だけをペイントするイメージで、既存の素材感を保ちながら色だけを変更してください。`;
 
       if (preset.mode === 'two_tone_horizontal') {
         promptParts.push(`外壁を水平に2色に分けてツートンカラーにしてください：
 - 上部: ${primaryColor?.name}（カラーコード: ${primaryColor?.hex}）
 - 下部: ${secondaryColor?.name}（カラーコード: ${secondaryColor?.hex}）
-境界線は建物の構造やバランスを考慮し、自然な水平ラインで区切ってください。分割比率は建物の形状に合わせて最適なバランスを自動で判断してください。`);
+境界線は建物の構造やバランスを考慮し、自然な水平ラインで区切ってください。分割比率は建物の形状に合わせて最適なバランスを自動で判断してください。既存の外壁素材の質感やテクスチャは維持したまま、色だけを変更してください。`);
       } else if (preset.mode === 'two_tone_vertical') {
         promptParts.push(`外壁を垂直に2色に分けてツートンカラーにしてください：
 - 左側: ${primaryColor?.name}（カラーコード: ${primaryColor?.hex}）
 - 右側: ${secondaryColor?.name}（カラーコード: ${secondaryColor?.hex}）
-境界線は建物の構造やバランスを考慮し、自然な垂直ラインで区切ってください。分割比率は建物の形状に合わせて最適なバランスを自動で判断してください。`);
-      }
-
-      if (material) {
-        promptParts.push(material.promptFragment);
+境界線は建物の構造やバランスを考慮し、自然な垂直ラインで区切ってください。分割比率は建物の形状に合わせて最適なバランスを自動で判断してください。既存の外壁素材の質感やテクスチャは維持したまま、色だけを変更してください。`);
       }
 
       const finalPrompt = `${basePrompt}\n\n${promptParts.join('\n\n')}`;
@@ -1492,35 +1496,19 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
         <div>
           <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <CubeIcon className="w-5 h-5 text-green-600" />
-            外壁の素材を選択（オプション）
-          </h4>
-          <div className="grid grid-cols-2 gap-2">
-            {EXTERIOR_MATERIALS.map((material) => (
-              <button
-                key={material.id}
-                onClick={() => setSelectedExteriorMaterial(material.id === selectedExteriorMaterial ? '' : material.id)}
-                className={`p-3 text-sm font-medium text-left rounded-lg border-2 transition-all ${
-                  selectedExteriorMaterial === material.id
-                    ? 'border-green-600 bg-green-50 text-green-800'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-green-400 hover:bg-gray-50'
-                }`}
-              >
-                {material.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
             <EditIcon className="w-5 h-5 text-green-600" />
             追加の指示（オプション）
           </h4>
           <textarea
             value={exteriorCustomPrompt}
             onChange={(e) => setExteriorCustomPrompt(e.target.value)}
-            placeholder="例：1階と2階で色を変えてツートンカラーにしてください。"
+            placeholder={
+              colorMode === 'single'
+                ? "例：外壁全体を均一に塗装してください。軒天井は白で残してください。"
+                : colorMode === 'two_tone_horizontal'
+                ? "例：1階と2階の境界で水平に色分けしてください。幕板部分は上階の色に合わせてください。"
+                : "例：玄関側とバルコニー側で垂直に色分けしてください。出隅部分は濃い色で統一してください。"
+            }
             rows={3}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
             disabled={isDisabled}
@@ -1529,7 +1517,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
         <button
           onClick={handleExteriorGenerate}
-          disabled={isDisabled || (!selectedExteriorColor && !selectedExteriorMaterial && !exteriorCustomPrompt.trim())}
+          disabled={isDisabled || (!selectedExteriorColor && !exteriorCustomPrompt.trim())}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 font-bold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
           <SparklesIcon className="w-5 h-5" />
@@ -1538,18 +1526,157 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
       </div>
     );
 
-    const renderProductsTab = () => (
-      <div className="space-y-6">
-        <p className="text-sm text-gray-600">
-          塗料商品データベースと連携し、実際の塗料でシミュレーションできます。
-        </p>
-        <div className="text-center py-12 text-gray-500">
-          <BuildingStorefrontIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <p className="font-semibold">商品タブは実装中です</p>
-          <p className="text-sm mt-2">商品データベースから塗料を選択してシミュレーションする機能を準備しています。</p>
+    const renderExteriorPaintingFinetunePanel = () => {
+      const EXTERIOR_FINETUNE_TABS: { id: 'detailed' | 'products'; name: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
+        { id: 'detailed', name: '詳細設定', icon: EditIcon },
+        { id: 'products', name: '商品', icon: BuildingStorefrontIcon }
+      ];
+
+      const [finetuneActiveTab, setFinetuneActiveTab] = useState<'detailed' | 'products'>('detailed');
+
+      return (
+        <div className="space-y-4">
+          <div className="flex justify-between items-start pb-2 border-b border-gray-200">
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">微調整モード (外壁塗装)</h3>
+              <p className="text-sm text-gray-600 mt-1">生成された外壁デザインを微調整します。</p>
+            </div>
+            <button
+              onClick={onExitFinetuning}
+              className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors flex-shrink-0 ml-4"
+              aria-label="比較表示に戻る"
+            >
+              <ArrowUturnLeftIcon className="w-4 h-4" />
+              比較に戻る
+            </button>
+          </div>
+
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex gap-x-4" aria-label="Tabs">
+              {EXTERIOR_FINETUNE_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setFinetuneActiveTab(tab.id)}
+                  className={`${
+                    finetuneActiveTab === tab.id
+                      ? 'border-green-500 text-green-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } flex items-center gap-2 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-all`}
+                >
+                  <tab.icon className="w-5 h-5"/>
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="pt-2">
+            {finetuneActiveTab === 'detailed' && renderDetailedTab()}
+            {finetuneActiveTab === 'products' && renderProductsTab()}
+          </div>
         </div>
-      </div>
-    );
+      );
+    };
+
+    const renderProductsTab = () => {
+      const filteredProducts = products.filter(p => p.categoryId === selectedCategoryId);
+
+      const handleExteriorProductGenerate = () => {
+        if (!exteriorCustomPrompt.trim()) return;
+
+        const selectedProducts = products.filter(p => selectedProductIds.includes(p.id));
+        if (selectedProducts.length === 0) {
+          alert("使用する塗料を1つ以上選択してください。");
+          return;
+        }
+
+        // 塗料の場合、外壁全体に均一に適用する指示を追加
+        const finalPrompt = `提供されている塗料商品画像の色を使用して、以下の指示に従ってください：${exteriorCustomPrompt}。塗料は外壁の質感を保ちながら、自然に色を適用してください。`;
+
+        onGenerate('products', finalPrompt, selectedProducts);
+      };
+
+      return (
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="paint-category" className="block text-sm font-medium text-gray-700 mb-1">1. 塗料カテゴリーを選択</label>
+            <select
+              id="paint-category"
+              value={selectedCategoryId}
+              onChange={(e) => {
+                setSelectedCategoryId(e.target.value);
+                setSelectedProductIds([]);
+              }}
+              disabled={isDisabled || categories.length === 0}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+            >
+              {categories.length === 0 ? (
+                <option>カテゴリー未登録</option>
+              ) : (
+                categories.map(category => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-1">2. 使用する塗料を選択</h4>
+            {categories.length === 0 || !selectedCategoryId ? (
+              <p className="text-center text-sm text-gray-500 py-4">
+                データベースに塗料カテゴリーがありません。
+              </p>
+            ) : filteredProducts.length === 0 ? (
+              <p className="text-center text-sm text-gray-500 py-4">
+                このカテゴリーに塗料がありません。
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 bg-gray-100 rounded-lg">
+                {filteredProducts.map(product => (
+                  <button
+                    key={product.id}
+                    onClick={() => handleProductSelect(product.id)}
+                    className={`relative w-full aspect-square rounded-md focus:outline-none transition-all duration-200 ${
+                      selectedProductIds.includes(product.id) ? 'ring-4 ring-offset-1 ring-green-500' : 'ring-2 ring-transparent hover:ring-green-300'
+                    }`}
+                  >
+                    <img src={product.src} alt="塗料" className="w-full h-full object-cover rounded-md" />
+                    {selectedProductIds.includes(product.id) && (
+                      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-md">
+                        <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-1">3. 塗装方法を指示</h4>
+            <textarea
+              value={exteriorCustomPrompt}
+              onChange={(e) => setExteriorCustomPrompt(e.target.value)}
+              placeholder="例：この塗料で外壁全体を塗装してください。 / 1階をこの色で、2階を別の色でツートンにしてください。"
+              rows={3}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+              disabled={isDisabled}
+            />
+          </div>
+
+          <button
+            onClick={handleExteriorProductGenerate}
+            disabled={isDisabled || !exteriorCustomPrompt.trim() || selectedProductIds.length === 0}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            <SparklesIcon className="w-5 h-5" />
+            <span>この塗料で外壁をシミュレーション</span>
+          </button>
+        </div>
+      );
+    };
 
     return (
       <div className="space-y-4">
@@ -1834,6 +1961,11 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
     // Finetuning mode for exterior
     if (exteriorSubMode === 'sketch2arch') {
       return renderSketchFinetunePanel();
+    }
+
+    // Finetuning mode for exterior painting
+    if (exteriorSubMode === 'exterior_painting') {
+      return renderExteriorPaintingFinetunePanel();
     }
   }
 

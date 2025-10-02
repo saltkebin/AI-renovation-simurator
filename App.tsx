@@ -10,9 +10,9 @@ import ErrorDisplay from './components/ErrorDisplay';
 import ConfirmationModal from './components/ConfirmationModal';
 import DatabasePage from './components/DatabasePage';
 import PinAuth from './components/PinAuth'; // Import the PinAuth component
-import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts } from './services/geminiService';
+import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts, generateExteriorPaintingQuotation } from './services/geminiService';
 import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory, ExteriorSubMode } from './types';
-import { RENOVATION_PROMPTS, OMAKASE_PROMPT } from './constants';
+import { RENOVATION_PROMPTS, OMAKASE_PROMPT, UPDATE_HISTORY } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
 import { db, verifyPin } from './services/firebase'; // Import verifyPin
 import { collection, getDocs, addDoc } from 'firebase/firestore';
@@ -48,6 +48,7 @@ const App: React.FC = () => {
   const [appMode, setAppMode] = useState<AppMode>('renovation');
   const [exteriorSubMode, setExteriorSubMode] = useState<ExteriorSubMode>('sketch2arch');
   const [appView, setAppView] = useState<AppView>('main');
+  const [showAllUpdates, setShowAllUpdates] = useState<boolean>(false);
   const [modalInfo, setModalInfo] = useState<ModalInfo | null>(null);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [products, setProducts] = useState<RegisteredProduct[]>([]);
@@ -62,7 +63,7 @@ const App: React.FC = () => {
         const categorySnapshot = await getDocs(categoriesCollection);
         if (categorySnapshot.empty) {
           // Create default categories if none exist
-          const defaultCategories = [{ name: '壁紙' }, { name: '家具' }];
+          const defaultCategories = [{ name: '壁紙' }, { name: '家具' }, { name: '塗料' }];
           const newCategories: ProductCategory[] = [];
           for (const cat of defaultCategories) {
             const docRef = await addDoc(categoriesCollection, cat);
@@ -377,8 +378,36 @@ const App: React.FC = () => {
           if (!originalBase64 || !generatedBase64) {
               throw new Error("無効な画像データです。");
           }
-          
+
           const result = await generateQuotation(originalBase64, generatedBase64, mimeType, floor, wall, casing);
+          setQuotationResult(result);
+
+      } catch (err) {
+          console.error(err);
+          setError(err instanceof Error ? err.message : '見積もりの生成に失敗しました。');
+      } finally {
+          setIsQuoting(false);
+      }
+  };
+
+  const handleGetExteriorQuote = async (wallArea: string, paintType: string) => {
+      if (!originalImage || !activeGeneratedImage) {
+          setError("見積もりには、元の画像と生成された画像の両方が必要です。");
+          return;
+      }
+      setIsQuoting(true);
+      setError(null);
+      setQuotationResult(null);
+
+      try {
+          const originalBase64 = originalImage.split(',')[1];
+          const generatedBase64 = activeGeneratedImage.src.split(',')[1];
+
+          if (!originalBase64 || !generatedBase64) {
+              throw new Error("無効な画像データです。");
+          }
+
+          const result = await generateExteriorPaintingQuotation(originalBase64, generatedBase64, mimeType, wallArea, paintType);
           setQuotationResult(result);
 
       } catch (err) {
@@ -653,9 +682,40 @@ const App: React.FC = () => {
               <ErrorDisplay error={error} />
             )}
             {!isLoading && !error && !originalImage && (
-              <div className="text-center text-gray-500">
+              <div className="text-center text-gray-500 max-w-3xl mx-auto px-4">
                 <p className="text-2xl font-semibold mb-2">AIデザインツールへようこそ</p>
-                <p>下のパネルから物件の写真やスケッチをアップロードして開始してください。</p>
+                <p className="mb-6">下のパネルから物件の写真やスケッチをアップロードして開始してください。</p>
+
+                {/* Update History */}
+                <div className="mt-8 text-left bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
+                    <SparklesIcon className="w-5 h-5" />
+                    アップデート情報
+                  </h3>
+                  <div className="space-y-3">
+                    {(showAllUpdates ? UPDATE_HISTORY : UPDATE_HISTORY.slice(0, 5)).map((update, index) => (
+                      <div key={index} className="border-l-4 border-blue-400 pl-3">
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                            {update.date}
+                          </span>
+                          <h4 className="text-sm font-bold text-blue-900">{update.title}</h4>
+                        </div>
+                        <p className="text-sm text-blue-800">{update.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {UPDATE_HISTORY.length > 5 && (
+                    <div className="mt-4 text-center">
+                      <button
+                        onClick={() => setShowAllUpdates(!showAllUpdates)}
+                        className="text-sm text-blue-700 hover:text-blue-900 font-medium underline transition-colors"
+                      >
+                        {showAllUpdates ? '最新の情報のみ表示' : `過去のアップデート情報を見る（${UPDATE_HISTORY.length - 5}件）`}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             {!isLoading && !error && originalImage && !activeGeneratedImage && (
@@ -739,7 +799,7 @@ const App: React.FC = () => {
                     <SparklesIcon className="w-5 h-5" />
                     この画像を微調整する
                   </button>
-                  {appMode === 'renovation' && (
+                  {(appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                     <button
                       onClick={handleEnterQuotationMode}
                       className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
@@ -750,7 +810,7 @@ const App: React.FC = () => {
                   )}
                 </>
               )}
-              {isFinetuningMode && !isQuotationMode && appMode === 'renovation' && (
+              {isFinetuningMode && !isQuotationMode && (appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                 <button
                   onClick={handleEnterQuotationMode}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
@@ -784,7 +844,9 @@ const App: React.FC = () => {
           <div className={`rounded-xl shadow-lg p-6 space-y-6 mt-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
             {isQuotationMode ? (
               <QuotationPanel
+                appMode={appMode}
                 onGetQuote={handleGetQuote}
+                onGetExteriorQuote={handleGetExteriorQuote}
                 onExit={handleExitQuotationRequest}
                 isQuoting={isQuoting}
                 quotationResult={quotationResult}
@@ -836,7 +898,9 @@ const App: React.FC = () => {
             <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
               {isQuotationMode ? (
                 <QuotationPanel
+                  appMode={appMode}
                   onGetQuote={handleGetQuote}
+                  onGetExteriorQuote={handleGetExteriorQuote}
                   onExit={handleExitQuotationRequest}
                   isQuoting={isQuoting}
                   quotationResult={quotationResult}
@@ -895,9 +959,40 @@ const App: React.FC = () => {
               <ErrorDisplay error={error} />
             )}
             {!isLoading && !error && !originalImage && (
-              <div className="text-center text-gray-500">
+              <div className="text-center text-gray-500 max-w-3xl mx-auto">
                 <p className="text-2xl font-semibold mb-2">AIデザインツールへようこそ</p>
-                <p>左のパネルから物件の写真やスケッチをアップロードして開始してください。</p>
+                <p className="mb-6">左のパネルから物件の写真やスケッチをアップロードして開始してください。</p>
+
+                {/* Update History */}
+                <div className="mt-8 text-left bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
+                    <SparklesIcon className="w-5 h-5" />
+                    アップデート情報
+                  </h3>
+                  <div className="space-y-3">
+                    {(showAllUpdates ? UPDATE_HISTORY : UPDATE_HISTORY.slice(0, 5)).map((update, index) => (
+                      <div key={index} className="border-l-4 border-blue-400 pl-3">
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                            {update.date}
+                          </span>
+                          <h4 className="text-sm font-bold text-blue-900">{update.title}</h4>
+                        </div>
+                        <p className="text-sm text-blue-800">{update.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {UPDATE_HISTORY.length > 5 && (
+                    <div className="mt-4 text-center">
+                      <button
+                        onClick={() => setShowAllUpdates(!showAllUpdates)}
+                        className="text-sm text-blue-700 hover:text-blue-900 font-medium underline transition-colors"
+                      >
+                        {showAllUpdates ? '最新の情報のみ表示' : `過去のアップデート情報を見る（${UPDATE_HISTORY.length - 5}件）`}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             {!isLoading && !error && originalImage && !activeGeneratedImage && (
@@ -981,7 +1076,7 @@ const App: React.FC = () => {
                     <SparklesIcon className="w-5 h-5" />
                     この画像を微調整する
                   </button>
-                  {appMode === 'renovation' && (
+                  {(appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                     <button
                       onClick={handleEnterQuotationMode}
                       className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
@@ -992,7 +1087,7 @@ const App: React.FC = () => {
                   )}
                 </>
               )}
-              {isFinetuningMode && !isQuotationMode && appMode === 'renovation' && (
+              {isFinetuningMode && !isQuotationMode && (appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                 <button
                   onClick={handleEnterQuotationMode}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"

@@ -133,8 +133,21 @@ export interface TwoToneColorConfig {
 }
 
 export interface PaintProduct extends RegisteredProduct {
-  manufacturer?: string;
-  grade?: string; // 'silicon' | 'fluorine' | 'inorganic' | 'heat_shield'
-  durability?: number; // Years
-  pricePerSqm?: number; // Price per square meter
+  manufacturer?: string;        // メーカー名
+  productName?: string;         // 商品名
+  grade?: PaintTypeId;          // 塗料グレード
+  color?: string;               // 色名
+  colorCode?: string;           // カラーコード（例: #FFFFFF）
+  durability?: number;          // 耐用年数
+  pricePerSqm?: number;         // ㎡単価
+  description?: string;         // 商品説明
+}
+
+// Paint type for exterior painting quotation
+export type PaintTypeId = 'silicon' | 'fluorine' | 'inorganic' | 'heat_shield' | 'ai_choice' | 'other';
+
+export interface PaintType {
+  id: PaintTypeId;
+  name: string;
+  description: string;
 }

@@ -559,3 +559,107 @@ export const generateQuotation = async (
         throw new Error(`Gemini API request failed for quotation: ${error instanceof Error ? error.message : String(error)}`);
     }
 };
+
+export const generateExteriorPaintingQuotation = async (
+  originalImageBase64: string,
+  generatedImageBase64: string,
+  mimeType: string,
+  wallArea?: string,
+  paintType?: string,
+): Promise<QuotationResult> => {
+    try {
+        const areaInfo = wallArea ? `外壁面積: ${wallArea}㎡` : '外壁面積は画像から推定してください';
+        const paintInfo = paintType && paintType !== 'ai_choice'
+          ? `塗料の種類: ${paintType}を使用する想定で見積もってください`
+          : '塗料の種類は、画像の劣化状況や予算感から最適なものを選択してください';
+
+        const prompt = `あなたはプロの外壁塗装業者です。提供された「変更前」と「変更後」の2枚の建物外観画像を比較し、外壁塗装工事に必要な工事内容を推測してください。
+
+ユーザーが指定した情報:
+- ${areaInfo}
+- ${paintInfo}
+
+その上で、以下の項目を含む概算の見積もりをJSON形式で作成してください。
+
+**最重要ルール:**
+- 各工事項目は、必ず \`name\` と \`cost_range\` の2つのキーを持つオブジェクトにしてください。
+- \`name\` キーには、**工事内容の説明のみ**を文字列として含めてください。**費用に関する情報は一切含めないでください。**
+- \`cost_range\` キーには、**費用の範囲のみ**を文字列として含めてください。（例: "5万円〜8万円", "約10万円"）
+
+【工事項目の例】
+1. 足場設置・養生（外周足場、メッシュシート養生）
+2. 下地処理（高圧洗浄、ひび割れ補修、コーキング打ち替え）
+3. 塗装工事（下塗り・中塗り・上塗り、使用塗料のグレードを考慮）
+4. 付帯部塗装（雨樋、破風板、軒天等）
+5. 廃材処分費・諸経費
+
+【JSONの構造】
+1. construction_items: 工事項目のリスト。
+   - name: string (工事内容)
+   - cost_range: string (費用範囲)
+2. total_cost_range: 全体の費用の概算範囲（例：「80万円〜110万円」）。
+3. notes: 見積もりの前提条件や注意点（建物の階数、外壁の劣化状況、使用塗料のグレード等を含める）。
+
+上記のルールを厳守し、指定された構造のJSONオブジェクトのみを返してください。説明や前置きは一切不要です。`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: {
+                parts: [
+                    { text: '変更前:' },
+                    {
+                        inlineData: {
+                            data: originalImageBase64,
+                            mimeType: mimeType,
+                        },
+                    },
+                    { text: '変更後（塗装イメージ）:' },
+                    {
+                        inlineData: {
+                            data: generatedImageBase64,
+                            mimeType: mimeType,
+                        },
+                    },
+                    {
+                        text: prompt,
+                    },
+                ],
+            },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        construction_items: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    name: { type: Type.STRING },
+                                    cost_range: { type: Type.STRING },
+                                },
+                                required: ['name', 'cost_range']
+                            }
+                        },
+                        total_cost_range: { type: Type.STRING },
+                        notes: { type: Type.STRING },
+                    },
+                    required: ['construction_items', 'total_cost_range', 'notes']
+                },
+            },
+        });
+
+        const jsonText = response.text.trim();
+        const result = JSON.parse(jsonText);
+
+        if (result && Array.isArray(result.construction_items) && result.total_cost_range && result.notes) {
+            return result as QuotationResult;
+        }
+
+        throw new Error("API did not return a valid quotation in the expected format.");
+
+    } catch (error) {
+        console.error("Error calling Gemini API for exterior painting quotation:", error);
+        throw new Error(`Gemini API request failed for exterior painting quotation: ${error instanceof Error ? error.message : String(error)}`);
+    }
+};
