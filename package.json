@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "update-info": "node scripts/generate-update-info.js"
+    "update-info": "node scripts/generate-update-info.js",
+    "add-paint-category": "node scripts/add-paint-category.js"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",

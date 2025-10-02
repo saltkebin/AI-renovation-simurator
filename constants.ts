@@ -1,4 +1,4 @@
-import type { RenovationCategory, RenovationStyle, FurnitureStyle, RoomType, ArchOption, SketchCategory, SketchFinetuneTab, SketchFinetuneOption, ExteriorColorOption, ExteriorMaterialOption, PaintType } from './types';
+import type { RenovationCategory, RenovationStyle, FurnitureStyle, RoomType, ArchOption, SketchCategory, SketchFinetuneTab, SketchFinetuneOption, ExteriorColorOption, ExteriorMaterialOption, PaintType, WallpaperMaterialId, FurnitureCategoryId, FurnitureMaterialId } from './types';
 import { PaintBrushIcon, SwatchIcon, CubeIcon, EyeIcon, HomeModernIcon, EditIcon, UserGroupIcon, SunIcon, PhotoIcon } from './components/Icon';
 
 export const OMAKASE_PROMPT = "この部屋の雰囲気を分析し、あなたの美的センスで最も魅力的になるように全面的にリノベーションしてください。スタイルやテーマは自由にお任せします。";
@@ -325,6 +325,39 @@ export const PAINT_TYPES: PaintType[] = [
   { id: 'inorganic', name: '無機塗料', description: '耐用年数20-25年' },
   { id: 'heat_shield', name: '遮熱塗料', description: '耐用年数12-18年' },
   { id: 'other', name: 'その他', description: 'カスタム塗料を入力' },
+];
+
+// Wallpaper materials
+export const WALLPAPER_MATERIALS: { id: WallpaperMaterialId; name: string }[] = [
+  { id: 'non_woven', name: '不織布' },
+  { id: 'vinyl', name: 'ビニール' },
+  { id: 'paper', name: '紙' },
+  { id: 'fabric', name: '布' },
+  { id: 'other', name: 'その他' },
+];
+
+// Furniture categories
+export const FURNITURE_CATEGORIES: { id: FurnitureCategoryId; name: string }[] = [
+  { id: 'sofa', name: 'ソファ' },
+  { id: 'table', name: 'テーブル' },
+  { id: 'chair', name: 'チェア' },
+  { id: 'storage', name: '収納家具' },
+  { id: 'bed', name: 'ベッド' },
+  { id: 'desk', name: 'デスク' },
+  { id: 'shelf', name: 'シェルフ' },
+  { id: 'other', name: 'その他' },
+];
+
+// Furniture materials
+export const FURNITURE_MATERIALS: { id: FurnitureMaterialId; name: string }[] = [
+  { id: 'wood', name: '木材' },
+  { id: 'metal', name: '金属' },
+  { id: 'fabric', name: 'ファブリック' },
+  { id: 'leather', name: 'レザー' },
+  { id: 'glass', name: 'ガラス' },
+  { id: 'plastic', name: 'プラスチック' },
+  { id: 'mixed', name: '複合素材' },
+  { id: 'other', name: 'その他' },
 ];
 
 // Update information

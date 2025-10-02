@@ -143,6 +143,36 @@ export interface PaintProduct extends RegisteredProduct {
   description?: string;         // 商品説明
 }
 
+// Wallpaper product types
+export type WallpaperMaterialId = 'non_woven' | 'vinyl' | 'paper' | 'fabric' | 'other';
+
+export interface WallpaperProduct extends RegisteredProduct {
+  manufacturer?: string;        // メーカー名
+  productName?: string;         // 商品名
+  design?: string;              // 柄・デザイン名
+  colorCode?: string;           // カラー/色番
+  material?: WallpaperMaterialId; // 素材
+  size?: string;                // サイズ（例: 92cm×10m）
+  pricePerRoll?: number;        // 1ロール単価
+  pricePerSqm?: number;         // ㎡単価
+  description?: string;         // 商品説明
+}
+
+// Furniture product types
+export type FurnitureCategoryId = 'sofa' | 'table' | 'chair' | 'storage' | 'bed' | 'desk' | 'shelf' | 'other';
+export type FurnitureMaterialId = 'wood' | 'metal' | 'fabric' | 'leather' | 'glass' | 'plastic' | 'mixed' | 'other';
+
+export interface FurnitureProduct extends RegisteredProduct {
+  manufacturer?: string;        // メーカー/ブランド名
+  productName?: string;         // 商品名
+  furnitureCategory?: FurnitureCategoryId; // 家具カテゴリー
+  material?: FurnitureMaterialId; // 素材
+  size?: string;                // サイズ（例: W120×D80×H75cm）
+  color?: string;               // カラー
+  price?: number;               // 価格
+  description?: string;         // 商品説明
+}
+
 // Paint type for exterior painting quotation
 export type PaintTypeId = 'silicon' | 'fluorine' | 'inorganic' | 'heat_shield' | 'ai_choice' | 'other';
 

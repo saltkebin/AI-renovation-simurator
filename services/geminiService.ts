@@ -179,6 +179,29 @@ export const generateRenovationWithProducts = async (
   aspectRatio: string,
 ): Promise<RenovationResult> => {
     try {
+        // Build paint product information if available
+        let paintProductInfo = '';
+        products.forEach((product: any, index) => {
+            if (product.manufacturer || product.productName || product.color || product.colorCode) {
+                paintProductInfo += `\n\n【商品${index + 1}の詳細情報】`;
+                if (product.manufacturer) paintProductInfo += `\nメーカー: ${product.manufacturer}`;
+                if (product.productName) paintProductInfo += `\n商品名: ${product.productName}`;
+                if (product.color) paintProductInfo += `\n色名: ${product.color}`;
+                if (product.colorCode) paintProductInfo += `\nカラーコード: ${product.colorCode}`;
+                if (product.grade) {
+                    const gradeNames: Record<string, string> = {
+                        silicon: 'シリコン塗料',
+                        fluorine: 'フッ素塗料',
+                        inorganic: '無機塗料',
+                        heat_shield: '遮熱塗料',
+                        other: 'その他塗料'
+                    };
+                    paintProductInfo += `\n塗料グレード: ${gradeNames[product.grade] || product.grade}`;
+                }
+                if (product.description) paintProductInfo += `\n説明: ${product.description}`;
+            }
+        });
+
         const finalPrompt = `**最重要指示：** 生成する画像のサイズとアスペクト比は、必ず**1枚目の入力画像（部屋の画像）**と完全に一致させてください。1枚目の画像のアスペクト比は約${aspectRatio}です。2枚目以降の画像（商品の画像）の寸法は、出力画像の寸法に一切影響させてはなりません。このルールは、他のいかなる指示よりも優先されます。
 
 あなたはプロのインテリアデザイナーです。
@@ -187,10 +210,11 @@ export const generateRenovationWithProducts = async (
 【守るべきこと】
 - 部屋の基本的な構造（壁、窓、天井など）、構図、画角は変更しないでください。
 - 編集後の画像のみを返してください。テキストによる返答は一切不要です。
+${paintProductInfo}
 
 【テキスト指示】
 ${prompt}`;
-        
+
         // Get dimensions of the original room image
         const roomImage = new Image();
         const loadImagePromise = new Promise<void>((resolve, reject) => {
@@ -566,12 +590,38 @@ export const generateExteriorPaintingQuotation = async (
   mimeType: string,
   wallArea?: string,
   paintType?: string,
+  paintProduct?: any,
 ): Promise<QuotationResult> => {
     try {
         const areaInfo = wallArea ? `外壁面積: ${wallArea}㎡` : '外壁面積は画像から推定してください';
-        const paintInfo = paintType && paintType !== 'ai_choice'
-          ? `塗料の種類: ${paintType}を使用する想定で見積もってください`
-          : '塗料の種類は、画像の劣化状況や予算感から最適なものを選択してください';
+
+        let paintInfo = '';
+        if (paintProduct && (paintProduct.manufacturer || paintProduct.productName || paintProduct.pricePerSqm)) {
+            // Use paint product information if available
+            paintInfo = '使用塗料の詳細情報:\n';
+            if (paintProduct.manufacturer) paintInfo += `- メーカー: ${paintProduct.manufacturer}\n`;
+            if (paintProduct.productName) paintInfo += `- 商品名: ${paintProduct.productName}\n`;
+            if (paintProduct.color) paintInfo += `- 色: ${paintProduct.color}\n`;
+            if (paintProduct.colorCode) paintInfo += `- カラーコード: ${paintProduct.colorCode}\n`;
+            if (paintProduct.grade) {
+                const gradeNames: Record<string, string> = {
+                    silicon: 'シリコン塗料',
+                    fluorine: 'フッ素塗料',
+                    inorganic: '無機塗料',
+                    heat_shield: '遮熱塗料',
+                    other: 'その他塗料'
+                };
+                paintInfo += `- グレード: ${gradeNames[paintProduct.grade] || paintProduct.grade}\n`;
+            }
+            if (paintProduct.pricePerSqm) paintInfo += `- ㎡単価: ${paintProduct.pricePerSqm}円\n`;
+            if (paintProduct.durability) paintInfo += `- 耐用年数: ${paintProduct.durability}年\n`;
+            if (paintProduct.description) paintInfo += `- 説明: ${paintProduct.description}\n`;
+            paintInfo += '\n**重要**: 上記の㎡単価と耐用年数を必ず見積もりに反映してください。';
+        } else if (paintType && paintType !== 'ai_choice') {
+            paintInfo = `塗料の種類: ${paintType}を使用する想定で見積もってください`;
+        } else {
+            paintInfo = '塗料の種類は、画像の劣化状況や予算感から最適なものを選択してください';
+        }
 
         const prompt = `あなたはプロの外壁塗装業者です。提供された「変更前」と「変更後」の2枚の建物外観画像を比較し、外壁塗装工事に必要な工事内容を推測してください。
 

@@ -41,6 +41,18 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   categories,
   products
 }) => {
+  // Filter categories based on mode
+  const filteredCategories = React.useMemo(() => {
+    if (appMode === 'renovation') {
+      // Show only 壁紙 and 家具 in renovation mode
+      return categories.filter(c => ['壁紙', '家具'].includes(c.name));
+    } else if (appMode === 'exterior' && exteriorSubMode === 'exterior_painting') {
+      // Show only 塗料 in exterior painting mode
+      return categories.filter(c => c.name === '塗料');
+    }
+    return categories;
+  }, [appMode, exteriorSubMode, categories]);
+
   const [activeTab, setActiveTab] = useState<RenovationMode>('oneClick');
   const [finetuneActiveTab, setFinetuneActiveTab] = useState<'partial' | 'furniture' | 'person' | 'products'>('partial');
   const [customPrompt, setCustomPrompt] = useState('');
@@ -293,17 +305,17 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
   useEffect(() => {
     // When categories are loaded, if no category is selected or the selected one is not in the list, select the appropriate default.
-    if (categories.length > 0 && !categories.find(c => c.id === selectedCategoryId)) {
+    if (filteredCategories.length > 0 && !filteredCategories.find(c => c.id === selectedCategoryId)) {
       // For exterior painting mode, try to select "塗料" category by default
       if (appMode === 'exterior' && exteriorSubMode === 'exterior_painting') {
-        const paintCategory = categories.find(c => c.name === '塗料');
-        setSelectedCategoryId(paintCategory ? paintCategory.id : categories[0].id);
+        const paintCategory = filteredCategories.find(c => c.name === '塗料');
+        setSelectedCategoryId(paintCategory ? paintCategory.id : filteredCategories[0].id);
       } else {
         // For renovation mode, select the first category
-        setSelectedCategoryId(categories[0].id);
+        setSelectedCategoryId(filteredCategories[0].id);
       }
     }
-  }, [categories, selectedCategoryId, appMode, exteriorSubMode]);
+  }, [filteredCategories, selectedCategoryId, appMode, exteriorSubMode]);
 
 
   useEffect(() => {
@@ -328,13 +340,13 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
   useEffect(() => {
     // When switching to exterior painting products tab, select "塗料" category
-    if (appMode === 'exterior' && exteriorSubMode === 'exterior_painting' && exteriorPaintingActiveTab === 'products' && categories.length > 0) {
-      const paintCategory = categories.find(c => c.name === '塗料');
+    if (appMode === 'exterior' && exteriorSubMode === 'exterior_painting' && exteriorPaintingActiveTab === 'products' && filteredCategories.length > 0) {
+      const paintCategory = filteredCategories.find(c => c.name === '塗料');
       if (paintCategory && selectedCategoryId !== paintCategory.id) {
         setSelectedCategoryId(paintCategory.id);
       }
     }
-  }, [appMode, exteriorSubMode, exteriorPaintingActiveTab, categories, selectedCategoryId]);
+  }, [appMode, exteriorSubMode, exteriorPaintingActiveTab, filteredCategories, selectedCategoryId]);
 
   const handleGenerate = () => {
     if (customPrompt.trim()) {
@@ -347,7 +359,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
             return;
         }
         
-        const category = categories.find(c => c.id === selectedCategoryId);
+        const category = filteredCategories.find(c => c.id === selectedCategoryId);
         const isWallpaper = category?.name.includes('壁紙');
 
         let finalPrompt = customPrompt;
@@ -661,10 +673,10 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
             disabled={isDisabled || categories.length === 0}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
           >
-            {categories.length === 0 ? (
+            {filteredCategories.length === 0 ? (
                 <option>カテゴリー未登録</option>
             ) : (
-                categories.map(category => (
+                filteredCategories.map(category => (
                     <option key={category.id} value={category.id}>{category.name}</option>
                 ))
             )}
@@ -1610,10 +1622,10 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
               disabled={isDisabled || categories.length === 0}
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
             >
-              {categories.length === 0 ? (
+              {filteredCategories.length === 0 ? (
                 <option>カテゴリー未登録</option>
               ) : (
-                categories.map(category => (
+                filteredCategories.map(category => (
                   <option key={category.id} value={category.id}>{category.name}</option>
                 ))
               )}
