@@ -20,6 +20,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import QuotationChatBot from './QuotationChatBot';
 import EmailPreviewModal, { type EmailData } from './EmailPreviewModal';
 import QuotationPreviewModal from './QuotationPreviewModal';
+import ConfirmationModal from './ConfirmationModal';
 import { downloadQuotationPDF, generateQuotationPDFBlob } from '../utils/pdfUtils';
 import { generateQuotationEmail } from '../services/geminiService';
 import { generateQuotationNumber } from '../utils/quotationNumberUtils';
@@ -47,6 +48,7 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
   const [editingQuotation, setEditingQuotation] = useState<FormalQuotation | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Load quotations and templates from Firestore
   useEffect(() => {
@@ -160,6 +162,8 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
 
   const handleSave = async (quotation: FormalQuotation) => {
     try {
+      console.log('Saving quotation:', quotation);
+
       if (quotation.id) {
         // Update existing
         const docRef = doc(db, 'quotations', quotation.id);
@@ -170,6 +174,8 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
       } else {
         // Create new - generate quotation number if not exists
         const quotationNumber = quotation.quotationNumber || await generateQuotationNumber(tenantId);
+        console.log('Generated quotation number:', quotationNumber);
+
         await addDoc(collection(db, 'quotations'), {
           ...quotation,
           quotationNumber,
@@ -181,19 +187,26 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
       handleCloseEditor();
     } catch (error) {
       console.error('Failed to save quotation:', error);
-      alert('見積書の保存に失敗しました');
+      console.error('Error details:', error);
+      alert(`見積書の保存に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('この見積書を削除してもよろしいですか？')) return;
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirmId(id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmId) return;
 
     try {
-      await deleteDoc(doc(db, 'quotations', id));
+      await deleteDoc(doc(db, 'quotations', deleteConfirmId));
       await loadQuotations();
+      setDeleteConfirmId(null);
     } catch (error) {
       console.error('Failed to delete quotation:', error);
       alert('見積書の削除に失敗しました');
+      setDeleteConfirmId(null);
     }
   };
 
@@ -339,7 +352,8 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
             {quotations.map((quotation) => (
               <div
                 key={quotation.id}
-                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+                onClick={() => handleEdit(quotation)}
+                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-grow">
@@ -365,7 +379,7 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleDuplicate(quotation)}
                       className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -374,14 +388,7 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
                       <DocumentDuplicateIcon className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => handleEdit(quotation)}
-                      className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                      title="編集"
-                    >
-                      <PencilSquareIcon className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => quotation.id && handleDelete(quotation.id)}
+                      onClick={() => quotation.id && handleDeleteClick(quotation.id)}
                       className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="削除"
                     >
@@ -439,6 +446,18 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmId !== null}
+        title="見積書を削除"
+        message="この見積書を削除してもよろしいですか？"
+        confirmText="削除"
+        cancelText="キャンセル"
+        confirmButtonColor="red"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </div>
   );
 };
@@ -507,7 +526,7 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
       description: '',
       quantity: 1,
       unit: '式',
-      unitPrice: 0,
+      unitPrice: '' as any,
       amount: 0,
     };
     setFormData({
@@ -539,7 +558,9 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
 
     // Recalculate amount
     if (field === 'quantity' || field === 'unitPrice') {
-      updatedItems[index].amount = updatedItems[index].quantity * updatedItems[index].unitPrice;
+      const quantity = updatedItems[index].quantity || 0;
+      const unitPrice = updatedItems[index].unitPrice === '' ? 0 : (updatedItems[index].unitPrice || 0);
+      updatedItems[index].amount = quantity * unitPrice;
     }
 
     setFormData({ ...formData, items: updatedItems });
@@ -567,7 +588,18 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+
+    // Convert empty unitPrice to 0 before saving
+    const dataToSave = {
+      ...formData,
+      items: formData.items.map(item => ({
+        ...item,
+        unitPrice: item.unitPrice === '' ? 0 : item.unitPrice,
+        quantity: item.quantity || 0,
+      })),
+    };
+
+    onSave(dataToSave);
   };
 
   const handleApplySuggestion = (suggestion: any) => {
@@ -670,12 +702,6 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
                 className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-semibold"
               >
                 {showChatBot ? 'AIを非表示' : 'AIアシスタント'}
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold"
-              >
-                保存
               </button>
             </div>
           </div>
@@ -819,10 +845,12 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
                       <label className="block text-xs font-semibold text-gray-600 mb-1">単価</label>
                       <input
                         type="number"
-                        value={item.unitPrice}
-                        onChange={(e) => updateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                        value={item.unitPrice === '' ? '' : item.unitPrice}
+                        onChange={(e) => updateItem(index, 'unitPrice', e.target.value === '' ? '' as any : parseFloat(e.target.value) || 0)}
                         className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500"
                         min="0"
+                        step="10000"
+                        placeholder="0"
                       />
                     </div>
                     <div className="col-span-10 md:col-span-2 flex items-end">
@@ -875,8 +903,18 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
                   <span className="text-base font-bold text-emerald-900">合計金額</span>
                   <span className="text-2xl font-bold text-emerald-700">¥{formData.total.toLocaleString()}</span>
                 </div>
-                {/* Preview Button */}
+                {/* Save Button */}
                 <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold shadow-md"
+                  >
+                    保存
+                  </button>
+                </div>
+                {/* Preview Button */}
+                <div className="mt-3">
                   <button
                     type="button"
                     onClick={() => setIsPreviewModalOpen(true)}

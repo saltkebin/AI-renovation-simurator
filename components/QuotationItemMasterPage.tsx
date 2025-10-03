@@ -45,7 +45,7 @@ const QuotationItemMasterPage: React.FC<QuotationItemMasterPageProps> = ({
       category: '',
       description: '',
       defaultUnit: '式',
-      defaultUnitPrice: 0,
+      defaultUnitPrice: '' as any,
       sortOrder: masters.length,
     });
     setIsModalOpen(true);
@@ -59,21 +59,27 @@ const QuotationItemMasterPage: React.FC<QuotationItemMasterPageProps> = ({
   const handleSave = async () => {
     if (!editingMaster) return;
 
+    // Convert empty defaultUnitPrice to 0 before saving
+    const dataToSave = {
+      ...editingMaster,
+      defaultUnitPrice: editingMaster.defaultUnitPrice === '' ? 0 : editingMaster.defaultUnitPrice,
+    };
+
     try {
-      if (editingMaster.id) {
+      if (dataToSave.id) {
         // Update existing
-        const docRef = doc(db, 'quotationItemMasters', editingMaster.id);
+        const docRef = doc(db, 'quotationItemMasters', dataToSave.id);
         await updateDoc(docRef, {
-          category: editingMaster.category,
-          description: editingMaster.description,
-          defaultUnit: editingMaster.defaultUnit,
-          defaultUnitPrice: editingMaster.defaultUnitPrice,
-          sortOrder: editingMaster.sortOrder,
+          category: dataToSave.category,
+          description: dataToSave.description,
+          defaultUnit: dataToSave.defaultUnit,
+          defaultUnitPrice: dataToSave.defaultUnitPrice,
+          sortOrder: dataToSave.sortOrder,
         });
       } else {
         // Create new
         await addDoc(collection(db, 'quotationItemMasters'), {
-          ...editingMaster,
+          ...dataToSave,
           createdAt: Timestamp.now(),
         });
       }
@@ -240,11 +246,12 @@ const QuotationItemMasterPage: React.FC<QuotationItemMasterPageProps> = ({
                   <label className="block text-sm font-semibold text-gray-700 mb-2">単価 *</label>
                   <input
                     type="number"
-                    value={editingMaster.defaultUnitPrice}
-                    onChange={(e) => setEditingMaster({ ...editingMaster, defaultUnitPrice: parseFloat(e.target.value) || 0 })}
+                    value={editingMaster.defaultUnitPrice === '' ? '' : editingMaster.defaultUnitPrice}
+                    onChange={(e) => setEditingMaster({ ...editingMaster, defaultUnitPrice: e.target.value === '' ? '' as any : parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="3500"
+                    placeholder="0"
                     min="0"
+                    step="10000"
                   />
                 </div>
               </div>

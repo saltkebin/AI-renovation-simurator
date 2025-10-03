@@ -93,11 +93,15 @@ const QuotationPreviewModal: React.FC<QuotationPreviewModalProps> = ({
 
   const updateTenantInfo = (field: keyof typeof editableTenantSettings.companyInfo, value: string) => {
     if (!editableTenantSettings) return;
+
+    // Convert to number for logoSize
+    const finalValue = field === 'logoSize' ? parseInt(value) || 48 : value;
+
     setEditableTenantSettings({
       ...editableTenantSettings,
       companyInfo: {
         ...editableTenantSettings.companyInfo,
-        [field]: value
+        [field]: finalValue
       }
     });
   };
@@ -180,12 +184,47 @@ const QuotationPreviewModal: React.FC<QuotationPreviewModalProps> = ({
                 {editableTenantSettings && (
                   <div className="text-right text-xs text-gray-600 ml-8">
                     {editableTenantSettings.companyInfo.logo && (
-                      <div className="mb-3 flex justify-end">
+                      <div className="mb-3 flex justify-end items-center gap-2">
                         <img
                           src={editableTenantSettings.companyInfo.logo}
                           alt="Company Logo"
-                          className="h-12 w-auto object-contain"
+                          style={{ height: `${editableTenantSettings.companyInfo.logoSize || 48}px` }}
+                          className="w-auto object-contain"
                         />
+                        <div className="flex items-center gap-1">
+                          <label className="text-xs text-gray-500">サイズ:</label>
+                          <input
+                            type="number"
+                            value={editableTenantSettings.companyInfo.logoSize || 48}
+                            onChange={(e) => updateTenantInfo('logoSize', e.target.value)}
+                            className="w-16 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                            min="20"
+                            max="200"
+                            step="4"
+                          />
+                          <span className="text-xs text-gray-500">px</span>
+                          <button
+                            onClick={() => updateTenantInfo('logo', '')}
+                            className="ml-2 px-2 py-1 text-xs text-red-600 hover:text-red-800 border border-red-300 rounded hover:bg-red-50 transition-colors"
+                            title="このプレビューからロゴを削除（一時的）"
+                          >
+                            非表示
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {!editableTenantSettings.companyInfo.logo && initialTenantSettings?.companyInfo.logo && (
+                      <div className="mb-3 flex justify-end">
+                        <button
+                          onClick={() => {
+                            if (initialTenantSettings?.companyInfo.logo) {
+                              updateTenantInfo('logo', initialTenantSettings.companyInfo.logo);
+                            }
+                          }}
+                          className="px-3 py-1 text-xs text-indigo-600 hover:text-indigo-800 border border-indigo-300 rounded hover:bg-indigo-50 transition-colors"
+                        >
+                          ロゴを表示
+                        </button>
                       </div>
                     )}
                     <input
@@ -370,16 +409,19 @@ const QuotationPreviewModal: React.FC<QuotationPreviewModalProps> = ({
                   </button>
                 )
               ) : (
-                onNavigateToEmailSettings && (
+                <div className="relative group">
                   <button
-                    onClick={onNavigateToEmailSettings}
-                    className="flex items-center gap-2 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-semibold"
-                    title="メール送信機能を使用するにはメール設定が必要です"
+                    disabled
+                    className="flex items-center gap-2 px-6 py-3 bg-gray-400 text-white rounded-lg cursor-not-allowed font-semibold"
                   >
                     <PaperAirplaneIcon className="w-5 h-5" />
-                    <span>メール設定が必要</span>
+                    <span>メール送信</span>
                   </button>
-                )
+                  <div className="hidden group-hover:block group-active:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded whitespace-nowrap z-50">
+                    メインメニューの「メール認証設定」を済ませるとご利用いただけます
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                  </div>
+                </div>
               )}
               <button
                 onClick={handleDownloadPDF}

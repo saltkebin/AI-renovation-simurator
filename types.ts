@@ -191,6 +191,7 @@ export interface TenantQuotationSettings {
   companyInfo: {
     name: string;
     logo?: string;
+    logoSize?: number; // ロゴの高さ（ピクセル）デフォルト: 48
     postalCode: string;
     address: string;
     tel: string;

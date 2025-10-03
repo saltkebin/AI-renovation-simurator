@@ -882,60 +882,9 @@ const App: React.FC = () => {
               <ErrorDisplay error={error} />
             )}
             {!isLoading && !error && !originalImage && (
-              <div className="text-center text-gray-500 max-w-3xl mx-auto px-4">
+              <div className="text-center text-gray-500 max-w-3xl mx-auto px-4 py-12">
                 <p className="text-2xl font-semibold mb-2">AIデザインツールへようこそ</p>
-                <p className="mb-6">下のパネルから物件の写真やスケッチをアップロードして開始してください。</p>
-
-                {/* Update History */}
-                <div className="mt-8 text-left bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
-                    <SparklesIcon className="w-5 h-5" />
-                    アップデート情報
-                  </h3>
-                  <div className="space-y-3">
-                    {(showAllUpdates ? UPDATE_HISTORY : UPDATE_HISTORY.slice(0, 5)).map((update, index) => (
-                      <div key={index} className="border-l-4 border-blue-400 pl-3 pb-2">
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
-                            {update.date}
-                          </span>
-                          <h4 className="text-sm font-bold text-blue-900">{update.title}</h4>
-                        </div>
-                        <p className="text-sm text-blue-800 mb-2">{update.description}</p>
-                        {update.howToUse && (
-                          <button
-                            onClick={() => {
-                              setModalInfo({
-                                title: `使い方: ${update.title}`,
-                                message: (
-                                  <div className="text-left whitespace-pre-wrap text-sm text-gray-700">
-                                    {update.howToUse}
-                                  </div>
-                                ),
-                                confirmText: '閉じる',
-                                onConfirm: () => setModalInfo(null),
-                                hideCancelButton: true,
-                              });
-                            }}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
-                          >
-                            使い方確認
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {UPDATE_HISTORY.length > 5 && (
-                    <div className="mt-4 text-center">
-                      <button
-                        onClick={() => setShowAllUpdates(!showAllUpdates)}
-                        className="text-sm text-blue-700 hover:text-blue-900 font-medium underline transition-colors"
-                      >
-                        {showAllUpdates ? '最新の情報のみ表示' : `過去のアップデート情報を見る（${UPDATE_HISTORY.length - 5}件）`}
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <p className="mb-6">下のコントロールパネルから物件の写真やスケッチをアップロードして開始してください。</p>
               </div>
             )}
             {!isLoading && !error && originalImage && !activeGeneratedImage && (
@@ -1113,6 +1062,59 @@ const App: React.FC = () => {
               </>
             )}
           </div>
+
+          {/* Mobile: Update History */}
+          {!originalImage && (
+            <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
+                <SparklesIcon className="w-5 h-5" />
+                アップデート情報
+              </h3>
+              <div className="space-y-3">
+                {(showAllUpdates ? UPDATE_HISTORY : UPDATE_HISTORY.slice(0, 5)).map((update, index) => (
+                  <div key={index} className="border-l-4 border-blue-400 pl-3 pb-2">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                        {update.date}
+                      </span>
+                      <h4 className="text-sm font-bold text-blue-900">{update.title}</h4>
+                    </div>
+                    <p className="text-sm text-blue-800 mb-2">{update.description}</p>
+                    {update.howToUse && (
+                      <button
+                        onClick={() => {
+                          setModalInfo({
+                            title: `使い方: ${update.title}`,
+                            message: (
+                              <div className="text-left whitespace-pre-wrap text-sm text-gray-700">
+                                {update.howToUse}
+                              </div>
+                            ),
+                            confirmText: '閉じる',
+                            onConfirm: () => setModalInfo(null),
+                            hideCancelButton: true,
+                          });
+                        }}
+                        className="px-3 py-1.5 text-xs font-semibold text-amber-900 bg-yellow-300 rounded-md hover:bg-yellow-400 transition-colors shadow-sm"
+                      >
+                        使い方確認
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {UPDATE_HISTORY.length > 5 && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => setShowAllUpdates(!showAllUpdates)}
+                    className="text-sm text-blue-700 hover:text-blue-900 font-medium underline transition-colors"
+                  >
+                    {showAllUpdates ? '最新の情報のみ表示' : `過去のアップデート情報を見る（${UPDATE_HISTORY.length - 5}件）`}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Desktop: Original layout */}
@@ -1190,8 +1192,8 @@ const App: React.FC = () => {
                 <p className="text-2xl font-semibold mb-2">AIデザインツールへようこそ</p>
                 <p className="mb-6">左のパネルから物件の写真やスケッチをアップロードして開始してください。</p>
 
-                {/* Update History */}
-                <div className="mt-8 text-left bg-blue-50 border border-blue-200 rounded-lg p-4">
+                {/* Update History - Desktop only */}
+                <div className="mt-8 text-left bg-blue-50 border border-blue-200 rounded-lg p-4 hidden lg:block">
                   <h3 className="text-lg font-bold text-blue-900 mb-3 flex items-center gap-2">
                     <SparklesIcon className="w-5 h-5" />
                     アップデート情報
@@ -1221,7 +1223,7 @@ const App: React.FC = () => {
                                 hideCancelButton: true,
                               });
                             }}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                            className="px-3 py-1.5 text-xs font-semibold text-amber-900 bg-yellow-300 rounded-md hover:bg-yellow-400 transition-colors shadow-sm"
                           >
                             使い方確認
                           </button>

@@ -269,23 +269,46 @@ const TenantSettingsPage: React.FC<TenantSettingsPageProps> = ({ onNavigateBack,
                     <PhotoIcon className="w-8 h-8 text-gray-400" />
                   </div>
                 )}
-                <div className="flex-1">
-                  <input
-                    ref={logoInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    disabled={isUploadingLogo}
-                    className="hidden"
-                    id="logo-upload"
-                  />
-                  <label
-                    htmlFor="logo-upload"
-                    className={`inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors ${isUploadingLogo ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {isUploadingLogo ? 'アップロード中...' : 'ロゴを選択'}
-                  </label>
-                  <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF (最大2MB)</p>
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      disabled={isUploadingLogo}
+                      className="hidden"
+                      id="logo-upload"
+                    />
+                    <label
+                      htmlFor="logo-upload"
+                      className={`inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors ${isUploadingLogo ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {isUploadingLogo ? 'アップロード中...' : 'ロゴを選択'}
+                    </label>
+                    <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF (最大2MB)</p>
+                  </div>
+                  {settings.companyInfo.logo && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-600">見積書でのロゴサイズ:</label>
+                      <input
+                        type="number"
+                        value={settings.companyInfo.logoSize || 48}
+                        onChange={(e) => setSettings({
+                          ...settings,
+                          companyInfo: {
+                            ...settings.companyInfo,
+                            logoSize: parseInt(e.target.value) || 48
+                          }
+                        })}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                        min="20"
+                        max="200"
+                        step="4"
+                      />
+                      <span className="text-sm text-gray-500">px (デフォルト: 48px)</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
