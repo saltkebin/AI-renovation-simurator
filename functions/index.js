@@ -261,15 +261,8 @@ function generateQuotationHTML(quotation, tenantSettings) {
 exports.generateQuotationPDF = onCall({
   memory: "1GiB",
   timeoutSeconds: 60,
-  consumeAppCheckToken: true,
-  cors: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    /\.web\.app$/,
-    /\.firebaseapp\.com$/,
-  ],
+  cors: true,
+  invoker: 'public',
 }, async (request) => {
   try {
     const {quotation, tenantSettings} = request.data;
@@ -327,15 +320,8 @@ exports.generateQuotationPDF = onCall({
  * Verifies a SendGrid API key by making a test request.
  */
 exports.verifySendGridApiKey = onCall({
-  consumeAppCheckToken: true,
-  cors: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    /\.web\.app$/,
-    /\.firebaseapp\.com$/,
-  ],
+  cors: true,
+  invoker: 'public',
 }, async (request) => {
   const { apiKey } = request.data;
 
@@ -374,15 +360,8 @@ exports.verifySendGridApiKey = onCall({
  */
 exports.sendQuotationEmail = onCall({
   memory: "1GiB",
-  consumeAppCheckToken: true,
-  cors: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    /\.web\.app$/,
-    /\.firebaseapp\.com$/,
-  ],
+  cors: true,
+  invoker: 'public',
 }, async (request) => {
   const { tenantId, to, subject, body, attachmentUrl, quotationId } = request.data;
 
@@ -473,15 +452,8 @@ exports.sendQuotationEmail = onCall({
 exports.callGeminiGenerate = onCall({
   memory: "1GiB",
   timeoutSeconds: 120,
-  consumeAppCheckToken: true,
-  cors: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    /\.web\.app$/,
-    /\.firebaseapp\.com$/,
-  ],
+  cors: true,
+  invoker: 'public',
 }, async (request) => {
   try {
     const {model, contents, config} = request.data;
@@ -525,15 +497,8 @@ exports.callGeminiGenerate = onCall({
 exports.callGeminiStream = onCall({
   memory: "512MiB",
   timeoutSeconds: 120,
-  consumeAppCheckToken: true,
-  cors: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    /\.web\.app$/,
-    /\.firebaseapp\.com$/,
-  ],
+  cors: true,
+  invoker: 'public',
 }, async (request) => {
   try {
     const {model, contents, config} = request.data;
