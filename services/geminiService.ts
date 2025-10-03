@@ -1,7 +1,6 @@
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from './firebase';
 import type { QuotationResult, RegisteredProduct, FormalQuotation } from '../types';
-
-const functions = getFunctions();
 
 interface RenovationResult {
   image: string | null;

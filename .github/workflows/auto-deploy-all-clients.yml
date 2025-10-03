@@ -119,8 +119,10 @@ jobs:
       - name: Clean dist folder
         run: |
           echo "=== Cleaning old dist folder ==="
+          ls -la dist/ 2>/dev/null || echo "dist folder does not exist yet"
           rm -rf dist
           echo "=== Dist folder cleaned ==="
+          ls -la dist/ 2>/dev/null && echo "WARNING: dist still exists!" || echo "✅ dist folder successfully removed"
 
       - name: Build application
         run: |
