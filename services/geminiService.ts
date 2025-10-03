@@ -753,3 +753,59 @@ export async function* streamChat(
     throw error;
   }
 }
+
+/**
+ * Generate quotation email content using Gemini AI
+ */
+export async function generateQuotationEmail(
+  quotation: any,
+  recipientName: string,
+  companyName: string
+): Promise<{ subject: string; body: string }> {
+  try {
+    const prompt = `以下の見積もり情報をもとに、顧客に送信するプロフェッショナルなメール文面を作成してください。
+
+【見積もり情報】
+見積番号: ${quotation.quotationNumber || '未設定'}
+顧客名: ${recipientName}
+会社名: ${companyName}
+合計金額: ¥${quotation.totalAmount?.toLocaleString() || '0'}
+有効期限: ${quotation.validUntil || '未設定'}
+
+【メール要件】
+- 件名は簡潔でわかりやすく
+- 本文は丁寧でプロフェッショナルな文体
+- 見積書を添付することを明記
+- 質問や相談を歓迎する姿勢を示す
+
+JSONフォーマットで返してください：
+{
+  "subject": "件名",
+  "body": "本文（改行は\\nで表現）"
+}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash-exp',
+      contents: {
+        parts: [{ text: prompt }]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            subject: { type: Type.STRING },
+            body: { type: Type.STRING },
+          },
+          required: ['subject', 'body']
+        }
+      }
+    });
+
+    const result = JSON.parse(response.text.trim());
+    return result;
+  } catch (error) {
+    console.error("Error generating quotation email:", error);
+    throw error;
+  }
+}

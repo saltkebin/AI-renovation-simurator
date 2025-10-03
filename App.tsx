@@ -11,7 +11,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import DatabasePage from './components/DatabasePage';
 import PinAuth from './components/PinAuth';
 import MainMenu from './components/MainMenu';
-import QuotationChatBot from './components/QuotationChatBot';
+import QuotationEditorPage from './components/QuotationEditorPage';
 import SalesChatBot from './components/SalesChatBot';
 import TenantEmailSettingsPage from './components/TenantEmailSettingsPage';
 import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts, generateExteriorPaintingQuotation } from './services/geminiService';
@@ -661,9 +661,9 @@ const App: React.FC = () => {
     return <MainMenu onSelectApp={setSelectedApp} />;
   }
 
-  // Show quotation chatbot
+  // Show quotation editor
   if (selectedApp === 'quotation') {
-    return <QuotationChatBot onNavigateBack={() => setSelectedApp('menu')} />;
+    return <QuotationEditorPage onNavigateBack={() => setSelectedApp('menu')} />;
   }
 
   // Show sales chatbot
@@ -673,7 +673,9 @@ const App: React.FC = () => {
 
   // Show email settings
   if (selectedApp === 'email-settings') {
-    return <TenantEmailSettingsPage onNavigateBack={() => setSelectedApp('menu')} />;
+    // Use Firebase project ID as tenant ID
+    const tenantId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'default';
+    return <TenantEmailSettingsPage onNavigateBack={() => setSelectedApp('menu')} tenantId={tenantId} />;
   }
 
   if (appView === 'database') {
