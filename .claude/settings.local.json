@@ -26,7 +26,12 @@
       "Bash(gcloud secrets versions add:*)",
       "Bash(gcloud secrets add-iam-policy-binding:*)",
       "Bash(gcloud secrets get-iam-policy:*)",
-      "Bash(firebase deploy:*)"
+      "Bash(firebase deploy:*)",
+      "Bash(git checkout:*)",
+      "Bash(curl -s https://airenovation2.web.app/index.html)",
+      "Bash(gh run list:*)",
+      "Bash(curl -s \"https://airenovation2.web.app/\")",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
