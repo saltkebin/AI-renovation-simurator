@@ -103,8 +103,24 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Debug - List files before build
+        run: |
+          echo "=== Files in root directory ==="
+          ls -la | grep -E "^\.|env"
+          echo "=== .env file location and content ==="
+          pwd
+          if [ -f .env ]; then
+            echo "✅ .env exists in: $(pwd)"
+            wc -l .env
+          else
+            echo "❌ .env NOT found in: $(pwd)"
+          fi
+
       - name: Build application
-        run: npm run build
+        run: |
+          echo "=== Starting Vite build with env vars ==="
+          npm run build
+          echo "=== Build completed ==="
 
       - name: Debug - Check built files for env vars
         run: |
