@@ -50,20 +50,17 @@ jobs:
 
           echo "Using secrets: $GEMINI_SECRET_NAME, $FIREBASE_CONFIG_SECRET_NAME"
 
-      - name: Parse Firebase Config
+      - name: Parse Firebase Config and Create .env
         run: |
           CLIENT_UPPER="${{ env.CLIENT_UPPER }}"
 
           # Get Firebase config from secrets dynamically
           if [ "$CLIENT_UPPER" = "DEFAULT" ]; then
             CONFIG_JSON='${{ secrets.FIREBASE_CONFIG_DEFAULT }}'
-            GEMINI_KEY='${{ secrets.GEMINI_API_KEY_DEFAULT }}'
           elif [ "$CLIENT_UPPER" = "HITOTOIRO" ]; then
             CONFIG_JSON='${{ secrets.FIREBASE_CONFIG_HITOTOIRO }}'
-            GEMINI_KEY='${{ secrets.GEMINI_API_KEY_HITOTOIRO }}'
           elif [ "$CLIENT_UPPER" = "ISHIBASHIHOME" ]; then
             CONFIG_JSON='${{ secrets.FIREBASE_CONFIG_ISHIBASHIHOME }}'
-            GEMINI_KEY='${{ secrets.GEMINI_API_KEY_ISHIBASHIHOME }}'
           else
             echo "ERROR: Unknown client ${{ matrix.client }}. Please add configuration for this client." >&2
             exit 1
@@ -75,21 +72,28 @@ jobs:
             exit 1
           fi
 
-          if [ -z "$GEMINI_KEY" ] || [ "$GEMINI_KEY" = "null" ]; then
-            echo "ERROR: Gemini API key secret not found for client: ${{ matrix.client }}" >&2
-            echo "Expected secret name: GEMINI_API_KEY_$CLIENT_UPPER" >&2
-            exit 1
-          fi
+          # Parse Firebase config
+          FIREBASE_API_KEY=$(echo $CONFIG_JSON | jq -r .apiKey)
+          FIREBASE_AUTH_DOMAIN=$(echo $CONFIG_JSON | jq -r .authDomain)
+          FIREBASE_PROJECT_ID=$(echo $CONFIG_JSON | jq -r .projectId)
+          FIREBASE_STORAGE_BUCKET=$(echo $CONFIG_JSON | jq -r .storageBucket)
+          FIREBASE_MESSAGING_SENDER_ID=$(echo $CONFIG_JSON | jq -r .messagingSenderId)
+          FIREBASE_APP_ID=$(echo $CONFIG_JSON | jq -r .appId)
 
-          # Parse Firebase config and set environment variables
-          echo "VITE_GEMINI_API_KEY=$GEMINI_KEY" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_API_KEY=$(echo $CONFIG_JSON | jq -r .apiKey)" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_AUTH_DOMAIN=$(echo $CONFIG_JSON | jq -r .authDomain)" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_PROJECT_ID=$(echo $CONFIG_JSON | jq -r .projectId)" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_STORAGE_BUCKET=$(echo $CONFIG_JSON | jq -r .storageBucket)" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(echo $CONFIG_JSON | jq -r .messagingSenderId)" >> $GITHUB_ENV
-          echo "VITE_FIREBASE_APP_ID=$(echo $CONFIG_JSON | jq -r .appId)" >> $GITHUB_ENV
-          echo "FIREBASE_PROJECT_ID=$(echo $CONFIG_JSON | jq -r .projectId)" >> $GITHUB_ENV
+          # Create .env file for Vite build
+          cat > .env << EOF
+          VITE_FIREBASE_API_KEY=$FIREBASE_API_KEY
+          VITE_FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN
+          VITE_FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
+          VITE_FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET
+          VITE_FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID
+          VITE_FIREBASE_APP_ID=$FIREBASE_APP_ID
+          EOF
+
+          echo "Created .env file with Firebase configuration for build"
+
+          # Also set for deployment
+          echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID" >> $GITHUB_ENV
 
           echo "Parsed Firebase environment variables successfully for client: ${{ matrix.client }}"
 
