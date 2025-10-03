@@ -181,3 +181,145 @@ export interface PaintType {
   name: string;
   description: string;
 }
+
+// Tenant quotation settings
+export interface TenantQuotationSettings {
+  id?: string;
+  tenantId: string;
+
+  // Company information
+  companyInfo: {
+    name: string;
+    logo?: string;
+    postalCode: string;
+    address: string;
+    tel: string;
+    fax?: string;
+    email: string;
+    website?: string;
+    registrationNumber?: string; // 登録番号
+  };
+
+  // Quotation defaults
+  quotationDefaults: {
+    validityPeriod: number; // 有効期限（日数）
+    paymentTerms: string; // 支払条件
+    taxRate: number; // 消費税率
+    notes: string; // デフォルト備考
+  };
+
+  // AI assistance custom data
+  aiCustomData: {
+    companyPolicy: string; // 会社方針・強み
+    pricingGuidelines: string; // 価格設定ガイドライン
+    commonDiscounts: string; // 一般的な値引き条件
+    specialNotes: string; // 特記事項のパターン
+  };
+}
+
+// Formal quotation document
+export type QuotationStatus = 'draft' | 'confirmed' | 'sent';
+
+export interface FormalQuotationItem {
+  id: string;
+  category: string; // 項目カテゴリー（例：塗装工事、内装工事）
+  description: string; // 項目説明
+  quantity: number; // 数量
+  unit: string; // 単位（㎡、式、個など）
+  unitPrice: number; // 単価
+  amount: number; // 金額（quantity × unitPrice）
+}
+
+export interface FormalQuotation {
+  id?: string;
+  tenantId: string;
+  quotationNumber?: string; // 見積番号
+  createdAt?: Date;
+  updatedAt?: Date;
+  status: QuotationStatus;
+
+  // Source data (from AI renovation)
+  originalImageUrl?: string;
+  renovatedImageUrl?: string;
+
+  // Estimated data (AI generated)
+  estimatedItems?: QuotationItem[];
+  estimatedTotalRange?: string;
+
+  // Customer information
+  customerInfo: {
+    name: string;
+    email?: string; // 顧客メールアドレス
+    address: string;
+    propertyInfo: string; // 物件情報
+  };
+
+  // Formal quotation items
+  items: FormalQuotationItem[];
+  subtotal: number; // 小計
+  tax: number; // 消費税
+  total: number; // 合計
+  notes: string; // 備考
+  validUntil?: Date; // 有効期限
+
+  // Template reference
+  templateId?: string;
+}
+
+// Quotation counter for auto-numbering
+export interface QuotationCounter {
+  id?: string;
+  tenantId: string;
+  year: number;
+  lastNumber: number; // Last used number for this year
+}
+
+// Quotation item master for frequently used items
+export interface QuotationItemMaster {
+  id?: string;
+  tenantId: string;
+  category: string;
+  description: string;
+  defaultUnit: string;
+  defaultUnitPrice: number;
+  sortOrder?: number;
+  createdAt?: Date;
+}
+
+// Quotation template for reusable quotation patterns
+export interface QuotationTemplate {
+  id?: string;
+  tenantId: string;
+  name: string; // テンプレート名（例：外壁塗装標準パッケージ）
+  description?: string; // 説明
+  items: FormalQuotationItem[];
+  defaultNotes: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Tenant email settings for SendGrid integration
+export interface TenantEmailSettings {
+  id?: string;
+  tenantId: string;
+  provider: 'sendgrid'; // 将来的に他のプロバイダーも対応可能
+
+  // SendGrid settings
+  sendgridApiKey: string; // 暗号化して保存
+  senderEmail: string; // 送信元メールアドレス
+  senderName?: string; // 送信者名（任意）
+
+  // Verification status
+  isVerified: boolean; // テスト送信成功済みか
+  lastTestedAt?: Date; // 最後にテストした日時
+  testResult?: 'success' | 'failed'; // テスト結果
+  errorMessage?: string; // エラーメッセージ
+
+  // Statistics
+  emailsSentToday?: number;
+  emailsSentThisMonth?: number;
+  dailyLimit?: number; // ユーザーが設定する送信上限
+
+  createdAt?: Date;
+  updatedAt?: Date;
+}

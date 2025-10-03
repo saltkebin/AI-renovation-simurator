@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { SparklesIcon, DatabaseIcon, Bars3Icon, XMarkIcon, BookOpenIcon } from './Icon';
+import { HomeIcon, DatabaseIcon, Bars3Icon, XMarkIcon, BookOpenIcon, ArrowLeftIcon } from './Icon';
 
 interface HeaderProps {
-  onNavigate: (view: 'main' | 'database') => void;
+  onNavigate: (view: 'main' | 'database' | 'menu') => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
@@ -59,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
         <div className="flex items-center justify-between h-16">
           {/* Logo and Title */}
           <div className="flex items-center min-w-0">
-            <SparklesIcon className="h-8 w-8 text-indigo-600 flex-shrink-0" />
+            <HomeIcon className="h-8 w-8 text-indigo-600 flex-shrink-0" />
             <h1 className="ml-2 sm:ml-3 text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 tracking-tight truncate">
               AIリノベーション・シミュレーター
             </h1>
@@ -67,6 +67,14 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-3">
+            <button
+              onClick={() => onNavigate('menu')}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-600 hover:text-gray-800 transition-colors"
+              title="メインメニューに戻る"
+            >
+              <ArrowLeftIcon className="w-4 h-4" />
+              <span>メニュー</span>
+            </button>
             <a
               href="https://guide-airenovation.netlify.app/"
               target="_blank"
@@ -105,6 +113,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white relative z-50" data-mobile-menu>
             <div className="py-2 space-y-1">
+              <button
+                onClick={() => handleNavigateAndClose('menu')}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
+              >
+                <ArrowLeftIcon className="w-5 h-5 text-gray-400" />
+                <span>メインメニュー</span>
+              </button>
               <button
                 onClick={handleGuideClick}
                 className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"

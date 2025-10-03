@@ -1,6 +1,8 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,9 +16,17 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
+// Initialize App Check with reCAPTCHA v3
+// For development, we'll use debug token
+if (import.meta.env.DEV) {
+  // @ts-ignore
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_APP_CHECK_DEBUG_TOKEN || true;
+}
+
 // Get a reference to the database service and storage service
 const db = getFirestore(app);
 const storage = getStorage(app);
+const functions = getFunctions(app);
 
 /**
  * Verifies the provided PIN against the one stored in Firestore.
@@ -44,4 +54,4 @@ export const verifyPin = async (pin: string): Promise<boolean> => {
   }
 };
 
-export { db, storage };
+export { db, storage, functions, app };

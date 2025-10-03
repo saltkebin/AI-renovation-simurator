@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { QuotationResult, AppMode, PaintTypeId } from '../types';
-import { CalculatorIcon, ArrowUturnLeftIcon, SpinnerIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon, PlusCircleIcon } from './Icon';
+import { CalculatorIcon, ArrowUturnLeftIcon, SpinnerIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon, PlusCircleIcon, DocumentTextIcon } from './Icon';
 import { PAINT_TYPES } from '../constants';
+import CustomerInfoModal, { type CustomerInfo } from './CustomerInfoModal';
 
 interface QuotationPanelProps {
   appMode: AppMode;
@@ -12,6 +13,10 @@ interface QuotationPanelProps {
   quotationResult: QuotationResult | null;
   error: string | null;
   onDownloadImage: (editedQuotation: QuotationResult | null) => void;
+  onSaveAsFormalQuotation: (quotationResult: QuotationResult, customerInfo: CustomerInfo, originalImageUrl?: string, renovatedImageUrl?: string) => void;
+  originalImageUrl?: string;
+  renovatedImageUrl?: string;
+  tenantId: string;
 }
 
 // Helper to convert full-width characters to half-width
@@ -52,9 +57,23 @@ interface EditableItem {
   costMax: number; // Stored in ManYen units
 }
 
-const QuotationPanel: React.FC<QuotationPanelProps> = ({ appMode, onGetQuote, onGetExteriorQuote, onExit, isQuoting, quotationResult, error, onDownloadImage }) => {
+const QuotationPanel: React.FC<QuotationPanelProps> = ({
+  appMode,
+  onGetQuote,
+  onGetExteriorQuote,
+  onExit,
+  isQuoting,
+  quotationResult,
+  error,
+  onDownloadImage,
+  onSaveAsFormalQuotation,
+  originalImageUrl,
+  renovatedImageUrl,
+  tenantId
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedResult, setEditedResult] = useState<QuotationResult | null>(null);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   // Renovation mode states
   const [floor, setFloor] = useState('');
@@ -147,6 +166,17 @@ const QuotationPanel: React.FC<QuotationPanelProps> = ({ appMode, onGetQuote, on
       notes: editableNotes,
     });
     setIsEditing(false);
+  };
+
+  const handleSaveAsFormalQuotation = () => {
+    setIsCustomerModalOpen(true);
+  };
+
+  const handleCustomerInfoSave = (customerInfo: CustomerInfo) => {
+    if (editedResult) {
+      onSaveAsFormalQuotation(editedResult, customerInfo, originalImageUrl, renovatedImageUrl);
+      setIsCustomerModalOpen(false);
+    }
   };
 
   const renderRenovationInputs = () => (
@@ -335,36 +365,54 @@ const QuotationPanel: React.FC<QuotationPanelProps> = ({ appMode, onGetQuote, on
           <p className="text-xs text-gray-500 whitespace-pre-wrap bg-gray-100 p-3 rounded-md">{editedResult.notes}</p>
         </div>
         
-        <button
-          onClick={() => onDownloadImage(editedResult)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-emerald-800 bg-emerald-100 rounded-md hover:bg-emerald-200 transition-colors"
-        >
-          <ArrowDownTrayIcon className="w-5 h-5" />
-          <span>見積もり画像をダウンロード</span>
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={() => onDownloadImage(editedResult)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-emerald-800 bg-emerald-100 rounded-md hover:bg-emerald-200 transition-colors"
+          >
+            <ArrowDownTrayIcon className="w-5 h-5" />
+            <span>見積もり画像をダウンロード</span>
+          </button>
+
+          <button
+            onClick={handleSaveAsFormalQuotation}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+          >
+            <DocumentTextIcon className="w-5 h-5" />
+            <span>本格見積もり用として保存</span>
+          </button>
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-700">3. 見積もり</h2>
-        <button onClick={onExit} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-semibold">
-          <ArrowUturnLeftIcon className="w-4 h-4" />
-          <span>比較表示に戻る</span>
-        </button>
-      </div>
-      
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md" role="alert">
-          <p className="font-bold">エラー</p>
-          <p>{error}</p>
+    <>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-700">3. 見積もり</h2>
+          <button onClick={onExit} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-semibold">
+            <ArrowUturnLeftIcon className="w-4 h-4" />
+            <span>比較表示に戻る</span>
+          </button>
         </div>
-      )}
 
-      {quotationResult ? renderResult() : (appMode === 'exterior' ? renderExteriorInputs() : renderRenovationInputs())}
-    </div>
+        {error && (
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md" role="alert">
+            <p className="font-bold">エラー</p>
+            <p>{error}</p>
+          </div>
+        )}
+
+        {quotationResult ? renderResult() : (appMode === 'exterior' ? renderExteriorInputs() : renderRenovationInputs())}
+      </div>
+
+      <CustomerInfoModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        onSave={handleCustomerInfoSave}
+      />
+    </>
   );
 };
 

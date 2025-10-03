@@ -68,12 +68,37 @@
 3. **キーを生成**
 4. ダウンロードされたJSONファイルの**中身を全てコピー**
 
-### **Phase 2: GitHub Secrets設定（手動・3分）**
+#### 1-4. Secret Manager設定（新規追加 🔒）
+
+**Gemini APIキーをSecure保管**
+
+ターミナルで以下を実行:
+
+```bash
+# Secret Manager有効化
+gcloud services enable secretmanager.googleapis.com --project=airenovation-client-a
+
+# Gemini APIキーをシークレットに登録
+echo "YOUR_GEMINI_API_KEY" | \
+  gcloud secrets create GEMINI_API_KEY \
+  --data-file=- \
+  --project=airenovation-client-a
+
+# Cloud Functions権限付与
+gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
+  --member="serviceAccount:airenovation-client-a@appspot.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor" \
+  --project=airenovation-client-a
+```
+
+**重要:** `YOUR_GEMINI_API_KEY`は実際のGemini APIキーに置き換えてください
+
+### **Phase 2: GitHub Secrets設定（手動・2分）** ← 1分短縮!
 
 #### 2-1. GitHub リポジトリにアクセス
 1. **GitHub リポジトリ** > **Settings** > **Secrets and variables** > **Actions**
 
-#### 2-2. 3つのSecrets追加
+#### 2-2. 2つのSecrets追加（Gemini APIキーは不要に！）
 
 **A. Firebase Config**
 - **名前**: `FIREBASE_CONFIG_CLIENT_A`
@@ -93,9 +118,9 @@
 - **名前**: `FIREBASE_SERVICE_ACCOUNT_CLIENT_A`
 - **値**: Phase 1-3で取得したService Account JSON完全版
 
-**C. Gemini API Key**
-- **名前**: `GEMINI_API_KEY_CLIENT_A`
-- **値**: クライアント専用のGemini APIキー
+~~**C. Gemini API Key**~~ ← **不要！Secret Managerで管理**
+- ~~名前: `GEMINI_API_KEY_CLIENT_A`~~
+- ~~値: クライアント専用のGemini APIキー~~
 
 ### **Phase 3: 自動化スクリプト実行（自動・2分）**
 
@@ -253,13 +278,13 @@ service firebase.storage {
 
 | フェーズ | 作業内容 | 時間 | 自動/手動 | 詳細 |
 |---------|----------|------|-----------|------|
-| **1** | Firebase準備 | **5分** | 手動 | プロジェクト作成、サービス有効化、設定取得 |
-| **2** | GitHub Secrets | **3分** | 手動 | 3つのSecret設定 |
+| **1** | Firebase準備 + Secret Manager | **6分** | 手動 | プロジェクト作成、サービス有効化、設定取得、APIキー保護 |
+| **2** | GitHub Secrets | **2分** | 手動 | 2つのSecret設定（Gemini APIキー不要） |
 | **3** | 自動化スクリプト | **2分** | **自動** | Workflows更新、CORS設定、Git操作 |
 | **4** | 最終設定 | **2分** | 手動 | Rules設定、PIN設定 |
 | **5** | デプロイ&テスト | **2分** | **自動** | GitHub Actions実行、動作確認 |
 | | | | | |
-| **合計** | | **14分** | **手動10分 + 自動4分** | **従来30分から16分短縮** |
+| **合計** | | **14分** | **手動10分 + 自動4分** | **従来30分から16分短縮 + セキュア化** |
 
 ## 🎯 完成後の結果
 
