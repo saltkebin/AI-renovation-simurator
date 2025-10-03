@@ -165,6 +165,13 @@ jobs:
           echo "Generated .firebaserc with project: $PROJECT_ID for client: ${{ matrix.client }}"
           cat .firebaserc
 
+      - name: Debug - Check dist folder before deploy
+        run: |
+          echo "=== Checking dist folder ==="
+          ls -la dist/ | head -10
+          echo "=== Checking index.html ==="
+          head -5 dist/index.html
+
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
