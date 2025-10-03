@@ -4,6 +4,7 @@ import type { RenovationMode, FurnitureStyleId, RoomTypeId, RegisteredProduct, P
 import { RENOVATION_CATEGORIES, OMAKASE_PROMPT, OMAKASE_SKETCH_PROMPT, FURNITURE_STYLES, ROOM_TYPES, SKETCH_CATEGORIES, SKETCH_FINETUNE_TABS, EXTERIOR_COLORS, EXTERIOR_MATERIALS, SPLIT_RATIOS } from '../constants';
 import { MagicWandIcon, EditIcon, SparklesIcon, LightBulbIcon, SpinnerIcon, ArrowUturnLeftIcon, SofaIcon, UserGroupIcon, BuildingStorefrontIcon, HomeModernIcon, CubeIcon, SwatchIcon, DocumentTextIcon, PencilIcon, PaintBrushIcon, TrashIcon } from './Icon';
 import { generateSuggestions } from '../services/geminiService';
+import FeatureTip from './FeatureTip';
 
 interface RenovationPanelProps {
   // FIX: Added appMode prop to accept the application's current mode.
@@ -1692,7 +1693,10 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-gray-800">外壁塗装シミュレーション</h3>
+        <div className="flex items-center">
+          <h3 className="text-lg font-bold text-gray-800">外壁塗装シミュレーション</h3>
+          <FeatureTip tip="実際の塗料商品を使ったシミュレーションが可能です。「商品」タブから登録済みの塗料を選択して、施工後の外観イメージをお客様に提示できます。" />
+        </div>
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex gap-x-4" aria-label="Tabs">
             {EXTERIOR_PAINTING_TABS.map((tab) => (
@@ -1729,7 +1733,10 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-gray-800">パースを生成</h3>
+        <div className="flex items-center">
+          <h3 className="text-lg font-bold text-gray-800">パースを生成</h3>
+          <FeatureTip tip="手書きスケッチや簡単な図面から、プロ品質のフォトリアルなパースを生成できます。提案段階での完成イメージ共有に最適です。" />
+        </div>
         <div className="border-b border-gray-200">
             <nav className="-mb-px flex gap-x-4" aria-label="Tabs">
                 {SKETCH_TABS.map((tab) => (
@@ -2123,7 +2130,10 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
   return (
     <div className="w-full space-y-4">
-      <h3 className="text-lg font-bold text-gray-800">リノベーションを実行</h3>
+      <div className="flex items-center">
+        <h3 className="text-lg font-bold text-gray-800">リノベーションを実行</h3>
+        <FeatureTip tip="複数のスタイルを試して比較することで、お客様により多くの選択肢を提案できます。「かんたん」タブのワンタップおまかせ機能なら、AIが自動で最適なリノベーションを提案します。" />
+      </div>
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex flex-wrap gap-x-2 gap-y-1" aria-label="Tabs">
           {TABS.map((tab) => (

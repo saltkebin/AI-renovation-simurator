@@ -3,6 +3,7 @@ import type { QuotationResult, AppMode, PaintTypeId } from '../types';
 import { CalculatorIcon, ArrowUturnLeftIcon, SpinnerIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon, PlusCircleIcon, DocumentTextIcon } from './Icon';
 import { PAINT_TYPES } from '../constants';
 import CustomerInfoModal, { type CustomerInfo } from './CustomerInfoModal';
+import FeatureTip from './FeatureTip';
 
 interface QuotationPanelProps {
   appMode: AppMode;
@@ -334,7 +335,10 @@ const QuotationPanel: React.FC<QuotationPanelProps> = ({
       <div className="space-y-5">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="text-lg font-bold text-gray-800">AIによる概算見積もり</h3>
+            <div className="flex items-center">
+              <h3 className="text-lg font-bold text-gray-800">AIによる概算見積もり</h3>
+              <FeatureTip tip="編集後、「本格見積もり用として保存」ボタンから顧客情報を入力すると、正式な見積書として管理できます。保存後はメインメニューの見積書管理から詳細な編集が可能です。" />
+            </div>
             <p className="text-sm text-gray-500">内容の編集も可能です</p>
           </div>
           <button onClick={() => setIsEditing(true)} className="flex items-center gap-1 text-sm text-emerald-700 hover:text-emerald-900 font-semibold">

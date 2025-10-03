@@ -21,6 +21,7 @@ import QuotationChatBot from './QuotationChatBot';
 import EmailPreviewModal, { type EmailData } from './EmailPreviewModal';
 import QuotationPreviewModal from './QuotationPreviewModal';
 import ConfirmationModal from './ConfirmationModal';
+import FeatureTip from './FeatureTip';
 import { downloadQuotationPDF, generateQuotationPDFBlob } from '../utils/pdfUtils';
 import { generateQuotationEmail } from '../services/geminiService';
 import { generateQuotationNumber } from '../utils/quotationNumberUtils';
@@ -292,6 +293,7 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
               <div className="h-6 w-px bg-gray-300"></div>
               <DocumentTextIcon className="h-6 w-6 text-emerald-600" />
               <h1 className="text-xl font-bold text-gray-800">見積書管理</h1>
+              <FeatureTip tip="テンプレート機能を使えば、頻繁に使う見積書パターンを保存して再利用できます。項目マスタでよく使う工事項目を登録すると、見積書作成が更に効率化されます。" />
             </div>
             <div className="flex items-center gap-3">
               {onNavigateToTemplates && (
@@ -697,12 +699,15 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
               </h1>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowChatBot(!showChatBot)}
-                className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-semibold"
-              >
-                {showChatBot ? 'AIを非表示' : 'AIアシスタント'}
-              </button>
+              <div className="flex items-center">
+                <button
+                  onClick={() => setShowChatBot(!showChatBot)}
+                  className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-semibold"
+                >
+                  {showChatBot ? 'AIを非表示' : 'AIアシスタント'}
+                </button>
+                {!showChatBot && <FeatureTip tip="見積書作成アシスタントが、新しい項目の提案、備考欄の文章推敲、高額項目の代替案提示などをサポートします。" />}
+              </div>
             </div>
           </div>
         </div>
@@ -715,7 +720,10 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
             <form onSubmit={handleSubmit} className="space-y-6">
           {/* Customer Info */}
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">顧客情報</h2>
+            <div className="flex items-center mb-4">
+              <h2 className="text-lg font-bold text-gray-800">顧客情報</h2>
+              <FeatureTip tip="メールアドレスを登録しておくと、プレビュー画面から見積書を直接メール送信できます。メール認証設定が必要です。" />
+            </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">顧客名 *</label>
@@ -754,13 +762,42 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">メールアドレス</label>
+                <input
+                  type="email"
+                  value={formData.customerInfo.email}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    customerInfo: { ...formData.customerInfo, email: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="example@mail.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">電話番号</label>
+                <input
+                  type="tel"
+                  value={formData.customerInfo.phone}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    customerInfo: { ...formData.customerInfo, phone: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="03-1234-5678"
+                />
+              </div>
             </div>
           </div>
 
           {/* Items */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800">見積項目</h2>
+              <div className="flex items-center">
+                <h2 className="text-lg font-bold text-gray-800">見積項目</h2>
+                <FeatureTip tip="「マスタから選択」で項目マスターに登録した内容を素早く追加できます。単価の上下ボタンは1万円単位で調整できます。" />
+              </div>
               <div className="flex items-center gap-2">
                 {itemMasters.length > 0 && (
                   <div className="relative">
@@ -881,7 +918,10 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">備考</label>
+                <div className="flex items-center mb-2">
+                  <label className="block text-sm font-semibold text-gray-700">備考</label>
+                  <FeatureTip tip="備考欄には工事内容の詳細、支払い条件、特記事項などを記載できます。AIアシスタントに文章の推敲を依頼することもできます。" />
+                </div>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}

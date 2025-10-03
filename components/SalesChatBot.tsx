@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeftIcon, PaperAirplaneIcon } from './Icon';
 import { useChat, type Action, type Message } from '../hooks/useChat';
+import FeatureTip from './FeatureTip';
 
 interface SalesChatBotProps {
   onNavigateBack: () => void;
@@ -208,7 +209,10 @@ const SalesChatBot: React.FC<SalesChatBotProps> = ({ onNavigateBack }) => {
                 <ArrowLeftIcon className="w-5 h-5" />
                 <span>メインメニューに戻る</span>
               </button>
-              <h1 className="text-xl font-bold text-gray-800">営業支援AIチャットボット</h1>
+              <div className="flex items-center">
+                <h1 className="text-xl font-bold text-gray-800">営業支援AIチャットボット</h1>
+                <FeatureTip tip="業種ごとに最適化されたアクションボタンを使うと、よくある営業シーンでの文案やトークスクリプトを素早く生成できます。追加質問で更に詳細なアドバイスも受けられます。" />
+              </div>
             </div>
           </div>
         </header>

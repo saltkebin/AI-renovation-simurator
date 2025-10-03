@@ -193,18 +193,12 @@ const QuotationTemplatePage: React.FC<QuotationTemplatePageProps> = ({
             {templates.map((template) => (
               <div
                 key={template.id}
-                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+                onClick={() => handleEdit(template)}
+                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="text-lg font-bold text-gray-800">{template.name}</h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleEdit(template)}
-                      className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                      title="編集"
-                    >
-                      <PencilSquareIcon className="w-5 h-5" />
-                    </button>
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => template.id && handleDelete(template.id)}
                       className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

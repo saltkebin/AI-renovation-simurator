@@ -34,7 +34,9 @@
       "Bash(curl:*)",
       "Bash(grep:*)",
       "Bash(awk:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(echo \"Gemini API Keyの設定を確認してください：\n\n1. Google Cloud Console (https://console.cloud.google.com/) にアクセス\n2. 該当するプロジェクトを選択\n3. APIs & Services > Credentials\n4. hitotoiro用のAPIキーを選択\n5. Application restrictions > HTTP referrers (web sites)\n6. 以下のリファラーを追加：\n   - https://airenovation-hitotoiro.web.app/*\n   - https://airenovation-hitotoiro.firebaseapp.com/*\n   \n現在設定されているリファラーも確認してください。\")",
+      "Bash(npx tailwindcss init:*)"
     ],
     "deny": [],
     "ask": []

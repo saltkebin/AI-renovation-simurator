@@ -5,6 +5,7 @@ import { db, storage } from '../services/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, query, where, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import ConfirmationModal from './ConfirmationModal'; // Import the modal component
+import FeatureTip from './FeatureTip';
 import { PAINT_TYPES, WALLPAPER_MATERIALS, FURNITURE_CATEGORIES, FURNITURE_MATERIALS } from '../constants';
 
 interface DatabasePageProps {
@@ -641,7 +642,10 @@ const DatabasePage: React.FC<DatabasePageProps> = ({
         <header className="bg-white shadow-md sticky top-0 z-10">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
-                    <h1 className="text-2xl font-bold text-gray-800">商品データベース</h1>
+                    <div className="flex items-center">
+                      <h1 className="text-2xl font-bold text-gray-800">商品データベース</h1>
+                      <FeatureTip tip="登録した商品は、リノベーションや外壁塗装シミュレーションで使用できます。塗料・壁紙・家具それぞれに詳細情報を登録することで、より精度の高いシミュレーションが可能になります。" />
+                    </div>
                     <button
                         onClick={onNavigateBack}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"

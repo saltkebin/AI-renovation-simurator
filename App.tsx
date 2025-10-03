@@ -22,6 +22,7 @@ import { generateRenovationImage, generateQuotation, generateArchFromSketch, gen
 import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory, ExteriorSubMode } from './types';
 import { RENOVATION_PROMPTS, OMAKASE_PROMPT, UPDATE_HISTORY } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
+import FeatureTip from './components/FeatureTip';
 import { db, storage, verifyPin } from './services/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
