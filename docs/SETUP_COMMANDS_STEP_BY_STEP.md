@@ -31,7 +31,7 @@ FIREBASE_CONFIG_ISHIBASHIHOME → projectId: "??????" ← これを確認
 
 現在使用している`.env.local`のキー、または新しく発行したキー:
 ```
-例: AIzaSyDy-OvVPE44OIwcgcFwfyAe8rbbWn1BvWo
+例: YOUR_GEMINI_API_KEY
 ```
 
 **メモ:**
@@ -51,7 +51,7 @@ gcloud services enable secretmanager.googleapis.com --project=PROJECT_ID
 # 2. Gemini APIキー登録
 echo "YOUR_GEMINI_API_KEY" | \
   gcloud secrets create GEMINI_API_KEY \
-  --data-file=- \
+  --data-file=-\
   --project=PROJECT_ID
 
 # 3. Cloud Functions権限付与
@@ -72,9 +72,9 @@ gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
 gcloud services enable secretmanager.googleapis.com --project=airenovation2
 
 # 2. Gemini APIキー登録
-echo "AIzaSyDy-OvVPE44OIwcgcFwfyAe8rbbWn1BvWo" | \
+echo "YOUR_GEMINI_API_KEY" | \
   gcloud secrets create GEMINI_API_KEY \
-  --data-file=- \
+  --data-file=-\
   --project=airenovation2
 
 # 3. Cloud Functions権限付与
@@ -98,7 +98,7 @@ gcloud services enable secretmanager.googleapis.com --project=airenovation2
 Enterで実行 → 完了を待つ
 
 ```bash
-echo "AIzaSyDy-OvVPE44OIwcgcFwfyAe8rbbWn1BvWo" | gcloud secrets create GEMINI_API_KEY --data-file=- --project=airenovation2
+echo "YOUR_GEMINI_API_KEY" | gcloud secrets create GEMINI_API_KEY --data-file=- --project=airenovation2
 ```
 Enterで実行 → 完了を待つ
 
@@ -124,9 +124,9 @@ Enterで実行 → 完了を待つ
 gcloud services enable secretmanager.googleapis.com --project=airenovation-hitotoiro
 
 # 2. Gemini APIキー登録
-echo "AIzaSyDy-OvVPE44OIwcgcFwfyAe8rbbWn1BvWo" | \
+echo "YOUR_GEMINI_API_KEY" | \
   gcloud secrets create GEMINI_API_KEY \
-  --data-file=- \
+  --data-file=-\
   --project=airenovation-hitotoiro
 
 # 3. Cloud Functions権限付与
@@ -153,9 +153,9 @@ gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
 gcloud services enable secretmanager.googleapis.com --project=airenovation-ishibashihome
 
 # 2. Gemini APIキー登録
-echo "AIzaSyDy-OvVPE44OIwcgcFwfyAe8rbbWn1BvWo" | \
+echo "YOUR_GEMINI_API_KEY" | \
   gcloud secrets create GEMINI_API_KEY \
-  --data-file=- \
+  --data-file=-\
   --project=airenovation-ishibashihome
 
 # 3. Cloud Functions権限付与
@@ -192,7 +192,7 @@ echo "YOUR_GEMINI_API_KEY" | \
   ここを書き換え
 
   gcloud secrets create GEMINI_API_KEY \
-  --data-file=- \
+  --data-file=-\
   --project=PROJECT_ID
             ↑
       ここを書き換え
@@ -200,9 +200,9 @@ echo "YOUR_GEMINI_API_KEY" | \
 
 **例:**
 ```bash
-echo "AIzaSyDy-OvVPE44OIwcgcFwfyAe8rbbWn1BvWo" | \
+echo "YOUR_GEMINI_API_KEY" | \
   gcloud secrets create GEMINI_API_KEY \
-  --data-file=- \
+  --data-file=-\
   --project=airenovation2
 ```
 
@@ -291,7 +291,7 @@ gcloud secrets get-iam-policy GEMINI_API_KEY --project=airenovation2
 
 ### ❌ 間違い1: クォートを忘れる
 ```bash
-# 間違い
+#間違い
 echo AIzaSy... | gcloud secrets create...
 
 # 正しい
@@ -300,7 +300,7 @@ echo "AIzaSy..." | gcloud secrets create...
 
 ### ❌ 間違い2: @appspot.gserviceaccount.com を忘れる
 ```bash
-# 間違い
+#間違い
 --member="serviceAccount:airenovation2"
 
 # 正しい
