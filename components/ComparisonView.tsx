@@ -1,20 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 interface ComparisonViewProps {
   before: string;
   after: string;
-  aspectRatio: string;
 }
 
-const ComparisonView: React.FC<ComparisonViewProps> = ({ before, after, aspectRatio }) => {
+const ComparisonView: React.FC<ComparisonViewProps> = ({ before, after }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSliderPosition(Number(e.target.value));
   };
-  
-  const handleMove = (clientX: number) => {
+
+  const handleMove = useCallback((clientX: number) => {
     if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         const x = clientX - rect.left;
@@ -23,27 +22,27 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ before, after, aspectRa
         if (percentage > 100) percentage = 100;
         setSliderPosition(percentage);
     }
-  };
+  }, []);
 
-  const handleMouseMove = (e: MouseEvent) => handleMove(e.clientX);
-  const handleTouchMove = (e: TouchEvent) => handleMove(e.touches[0].clientX);
+  const handleMouseMove = useCallback((e: MouseEvent) => handleMove(e.clientX), [handleMove]);
+  const handleTouchMove = useCallback((e: TouchEvent) => handleMove(e.touches[0].clientX), [handleMove]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     window.removeEventListener('mousemove', handleMouseMove);
     window.removeEventListener('mouseup', handleMouseUp);
-  };
-  
-  const handleTouchEnd = () => {
+  }, [handleMouseMove]);
+
+  const handleTouchEnd = useCallback(() => {
     window.removeEventListener('touchmove', handleTouchMove);
     window.removeEventListener('touchend', handleTouchEnd);
-  };
+  }, [handleTouchMove]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
   };
-  
+
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -58,13 +57,12 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ before, after, aspectRa
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, []);
+  }, [handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
   return (
     <div 
-      className="w-full max-w-4xl mx-auto relative select-none" 
+      className="w-full h-full relative select-none" 
       ref={containerRef}
-      style={{ aspectRatio: aspectRatio }}
     >
       <img src={before} alt="リノベーション前" className="absolute inset-0 w-full h-full object-contain rounded-lg pointer-events-none" />
       <div 

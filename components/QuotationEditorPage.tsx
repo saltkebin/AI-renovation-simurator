@@ -56,16 +56,28 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
 
   const loadQuotations = async () => {
     try {
+      if (!tenantId) {
+        console.log('No tenantId provided');
+        setQuotations([]);
+        return;
+      }
+      console.log('Loading quotations for tenantId:', tenantId);
       const quotationsCollection = collection(db, 'quotations');
-      const snapshot = await getDocs(quotationsCollection);
+      const q = query(quotationsCollection, where('tenantId', '==', tenantId));
+      const snapshot = await getDocs(q);
+      console.log('Found quotations:', snapshot.docs.length);
       const quotationsList = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as FormalQuotation))
-        .filter(q => q.tenantId === tenantId)
+        .map(doc => {
+          const data = doc.data();
+          console.log('Quotation data:', { id: doc.id, ...data });
+          return { id: doc.id, ...data } as FormalQuotation;
+        })
         .sort((a, b) => {
           const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return dateB - dateA;
         });
+      console.log('Loaded quotations:', quotationsList);
       setQuotations(quotationsList);
     } catch (error) {
       console.error('Failed to load quotations:', error);
@@ -75,6 +87,7 @@ const QuotationEditorPage: React.FC<QuotationEditorPageProps> = ({
   };
 
   const loadTemplates = async () => {
+    if (!tenantId) return;
     try {
       const templatesCollection = collection(db, 'quotationTemplates');
       const q = query(templatesCollection, where('tenantId', '==', tenantId));
@@ -455,6 +468,7 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
   // Load tenant settings, email settings, and item masters
   useEffect(() => {
     const loadData = async () => {
+      if (!tenantId) return;
       try {
         // Load tenant settings
         const settingsDocRef = doc(db, 'tenantQuotationSettings', tenantId);
@@ -912,7 +926,7 @@ const QuotationEditor: React.FC<QuotationEditorProps> = ({ quotation, onSave, on
           pdfUrl={pdfUrl || undefined}
         />
       )}
-    </div>
+        </div>
       </main>
     </div>
   );

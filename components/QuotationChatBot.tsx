@@ -27,15 +27,31 @@ const QuotationChatBot: React.FC<QuotationChatBotProps> = ({
   const systemPrompt = useMemo(() => {
     let prompt = `あなたは建築・リフォーム業界の見積書作成を専門とするAIアシスタントです。
 回答は必ず日本語で行い、具体的で実践的なアドバイスを提供してください。`;
+
+    // 見積もり項目の詳細をフォーマット
+    const itemsList = currentQuotation.items.map((item, index) =>
+      `${index + 1}. ${item.description} - ${item.quantity}${item.unit} × ¥${item.unitPrice.toLocaleString()} = ¥${item.amount.toLocaleString()}`
+    ).join('\n');
+
     const context = `
 
 【現在編集中の見積書情報】
-` +
-      `顧客名: ${currentQuotation.customerInfo.name}
-` +
-      `合計: ${currentQuotation.total.toLocaleString()}円
-` +
-      `備考: ${currentQuotation.notes || '（なし）'}`;
+顧客名: ${currentQuotation.customerInfo.name}
+${currentQuotation.customerInfo.email ? `メールアドレス: ${currentQuotation.customerInfo.email}` : ''}
+${currentQuotation.customerInfo.phone ? `電話番号: ${currentQuotation.customerInfo.phone}` : ''}
+${currentQuotation.customerInfo.address ? `住所: ${currentQuotation.customerInfo.address}` : ''}
+${currentQuotation.customerInfo.propertyInfo ? `物件情報: ${currentQuotation.customerInfo.propertyInfo}` : ''}
+
+【見積もり項目】
+${itemsList}
+
+【金額内訳】
+小計: ¥${currentQuotation.subtotal.toLocaleString()}
+消費税(10%): ¥${currentQuotation.tax.toLocaleString()}
+合計: ¥${currentQuotation.total.toLocaleString()}
+
+【備考】
+${currentQuotation.notes || '（なし）'}`;
     return prompt + context;
   }, [currentQuotation, tenantSettings]);
 

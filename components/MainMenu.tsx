@@ -1,5 +1,5 @@
 import React from 'react';
-import { SparklesIcon, DocumentTextIcon, CogIcon, ChatBubbleLeftRightIcon } from './Icon';
+import { HomeIcon, DocumentTextIcon, CogIcon, ChatBubbleLeftRightIcon } from './Icon';
 
 interface MainMenuProps {
   onSelectApp: (app: 'renovation' | 'quotation' | 'email-settings' | 'sales-chatbot') => void;
@@ -11,7 +11,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onSelectApp }) => {
       <div className="max-w-7xl w-full">
         <div className="text-center mb-12">
           <div className="inline-block bg-indigo-600 p-4 rounded-2xl shadow-lg">
-            <SparklesIcon className="w-12 h-12 text-white" />
+            <HomeIcon className="w-12 h-12 text-white" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mt-4 mb-2">
             AIリノベーションシステム
@@ -30,7 +30,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onSelectApp }) => {
             >
               <div className="flex items-start gap-6">
                 <div className="flex-shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 p-4 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
-                  <SparklesIcon className="w-10 h-10 text-white" />
+                  <HomeIcon className="w-10 h-10 text-white" />
                 </div>
                 <div className="flex-grow">
                   <h2 className="text-3xl font-bold text-gray-800 mb-3 group-hover:text-indigo-600 transition-colors">

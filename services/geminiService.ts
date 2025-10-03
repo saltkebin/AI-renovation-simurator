@@ -727,21 +727,23 @@ export async function* streamChat(
       parts: [{ text: msg.content }]
     }));
 
-    const config: any = {
+    const generationConfig = {
       temperature: 0.7,
       topK: 40,
       topP: 0.95,
     };
 
+    const request: any = {
+      model: 'gemini-2.5-flash',
+      contents,
+      generationConfig,
+    };
+
     if (systemInstruction) {
-      config.systemInstruction = systemInstruction;
+      request.systemInstruction = { role: "system", parts: [{ text: systemInstruction }] };
     }
 
-    const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.0-flash-exp',
-      contents,
-      config
-    });
+    const stream = await ai.models.generateContentStream(request);
 
     for await (const chunk of stream) {
       if (chunk.text) {
@@ -759,17 +761,17 @@ export async function* streamChat(
  */
 export async function generateQuotationEmail(
   quotation: any,
-  recipientName: string,
   companyName: string
 ): Promise<{ subject: string; body: string }> {
   try {
+    const customerName = quotation.customerInfo?.name || '未設定';
     const prompt = `以下の見積もり情報をもとに、顧客に送信するプロフェッショナルなメール文面を作成してください。
 
 【見積もり情報】
 見積番号: ${quotation.quotationNumber || '未設定'}
-顧客名: ${recipientName}
+顧客名: ${customerName}
 会社名: ${companyName}
-合計金額: ¥${quotation.totalAmount?.toLocaleString() || '0'}
+合計金額: ¥${quotation.total?.toLocaleString() || '0'}
 有効期限: ${quotation.validUntil || '未設定'}
 
 【メール要件】
@@ -785,7 +787,7 @@ JSONフォーマットで返してください：
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       contents: {
         parts: [{ text: prompt }]
       },

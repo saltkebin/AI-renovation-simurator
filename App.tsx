@@ -14,15 +14,20 @@ import MainMenu from './components/MainMenu';
 import QuotationEditorPage from './components/QuotationEditorPage';
 import SalesChatBot from './components/SalesChatBot';
 import TenantEmailSettingsPage from './components/TenantEmailSettingsPage';
+import TenantSettingsPage from './components/TenantSettingsPage';
+import QuotationItemMasterPage from './components/QuotationItemMasterPage';
+import QuotationTemplatePage from './components/QuotationTemplatePage';
+import type { CustomerInfo } from './components/CustomerInfoModal';
 import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts, generateExteriorPaintingQuotation } from './services/geminiService';
 import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory, ExteriorSubMode } from './types';
 import { RENOVATION_PROMPTS, OMAKASE_PROMPT, UPDATE_HISTORY } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
-import { db, verifyPin } from './services/firebase';
+import { db, storage, verifyPin } from './services/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 type AppView = 'main' | 'database';
-type SelectedApp = 'menu' | 'renovation' | 'quotation' | 'email-settings' | 'sales-chatbot';
+type SelectedApp = 'menu' | 'renovation' | 'quotation' | 'email-settings' | 'sales-chatbot' | 'tenant-settings' | 'quotation-item-masters' | 'quotation-templates';
 
 interface ModalInfo {
   title: string;
@@ -58,6 +63,7 @@ const App: React.FC = () => {
   const [modalInfo, setModalInfo] = useState<ModalInfo | null>(null);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [products, setProducts] = useState<RegisteredProduct[]>([]);
+  const [tenantId] = useState<string>('airenovation2'); // テナントID
 
   useEffect(() => {
     if (!isAuthenticated) return; // Don't fetch data if not authenticated
@@ -213,12 +219,14 @@ const App: React.FC = () => {
   };
   
   const handleClearAll = () => {
+    console.log('handleClearAll called');
     setModalInfo({
       title: '全てクリアにする',
       message: 'これまでに生成した画像がすべて消えますがよろしいですか？',
       confirmText: 'クリアする',
       confirmButtonColor: 'red',
       onConfirm: () => {
+        console.log('Clearing all data...');
         resetState();
         setModalInfo(null);
       },
@@ -422,6 +430,138 @@ const App: React.FC = () => {
       } finally {
           setIsQuoting(false);
       }
+  };
+
+  // Helper function to parse cost range and get max value
+  const parseCostRangeMax = (costRange: string): number => {
+    // Remove all non-numeric characters except for numbers and periods
+    const numbers = costRange.match(/\d+(\.\d+)?/g);
+    if (!numbers || numbers.length === 0) return 0;
+
+    // Get the maximum value from the range
+    const maxValue = Math.max(...numbers.map(Number));
+
+    // Check if it's in 万円 (10,000 yen units)
+    if (costRange.includes('万')) {
+      return maxValue * 10000;
+    }
+
+    return maxValue;
+  };
+
+  const handleSaveAsFormalQuotation = async (quotationResult: QuotationResult, customerInfo: CustomerInfo, originalImageUrl?: string, renovatedImageUrl?: string) => {
+    console.log('Saving as formal quotation:', { quotationResult, customerInfo });
+
+    // 保存中のモーダルを表示
+    setModalInfo({
+      title: '保存中...',
+      message: '見積もりデータを保存しています。しばらくお待ちください。',
+      confirmText: '',
+      onConfirm: () => {},
+      hideCancelButton: true,
+    });
+
+    try {
+      const timestamp = Date.now();
+      let uploadedOriginalImageUrl = '';
+      let uploadedRenovatedImageUrl = '';
+
+      // 画像をFirebase Storageにアップロード
+      if (originalImageUrl) {
+        const originalImageRef = ref(storage, `quotations/${tenantId}/${timestamp}-original.png`);
+        await uploadString(originalImageRef, originalImageUrl, 'data_url');
+        uploadedOriginalImageUrl = await getDownloadURL(originalImageRef);
+        console.log('Original image uploaded:', uploadedOriginalImageUrl);
+      }
+
+      if (renovatedImageUrl) {
+        const renovatedImageRef = ref(storage, `quotations/${tenantId}/${timestamp}-renovated.png`);
+        await uploadString(renovatedImageRef, renovatedImageUrl, 'data_url');
+        uploadedRenovatedImageUrl = await getDownloadURL(renovatedImageRef);
+        console.log('Renovated image uploaded:', uploadedRenovatedImageUrl);
+      }
+
+      // 各項目の金額を計算
+      const items = quotationResult.construction_items.map((item, index) => {
+        const maxAmount = parseCostRangeMax(item.cost_range);
+        return {
+          id: `item-${timestamp}-${index}`,
+          category: '概算見積もり項目',
+          description: item.name,
+          quantity: 1,
+          unit: '式',
+          unitPrice: maxAmount,
+          amount: maxAmount,
+          costRange: item.cost_range, // 概算の範囲を保存
+        };
+      });
+
+      // 小計、税、合計を計算
+      const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+      const tax = Math.round(subtotal * 0.1);
+      const total = subtotal + tax;
+
+      // データベースに保存
+      const quotationData = {
+        customerInfo: {
+          name: customerInfo.name,
+          email: customerInfo.email || '',
+          phone: customerInfo.phone || '',
+          address: customerInfo.address || '',
+          propertyInfo: customerInfo.propertyInfo || '',
+        },
+        items: items,
+        notes: quotationResult.notes,
+        subtotal: subtotal,
+        tax: tax,
+        total: total,
+        totalCostRange: quotationResult.total_cost_range, // 概算の合計範囲
+        quotationNumber: `Q-${timestamp}`,
+        createdAt: new Date().toISOString(),
+        status: 'draft',
+        tenantId: tenantId,
+        originalImageUrl: uploadedOriginalImageUrl,
+        renovatedImageUrl: uploadedRenovatedImageUrl,
+      };
+
+      await addDoc(collection(db, 'quotations'), quotationData);
+      console.log('Quotation saved to database');
+
+      // 保存後に確認モーダルを表示
+      setModalInfo({
+        title: '保存完了',
+        message: (
+          <div>
+            <p className="mb-2">概算見積もりをデータベースに保存しました。</p>
+            <p>本格見積もり作成画面に移動して、詳細な見積書を作成しますか？</p>
+          </div>
+        ),
+        confirmText: '移動する',
+        confirmButtonColor: 'indigo',
+        onConfirm: () => {
+          setSelectedApp('quotation');
+          setModalInfo(null);
+        },
+        cancelText: 'このまま続ける',
+        onCancel: () => setModalInfo(null),
+      });
+
+    } catch (error) {
+      console.error('Error saving quotation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setModalInfo({
+        title: 'エラー',
+        message: (
+          <div>
+            <p>データベースへの保存に失敗しました。</p>
+            <p className="text-sm text-gray-600 mt-2">エラー: {errorMessage}</p>
+          </div>
+        ),
+        confirmText: 'OK',
+        onConfirm: () => setModalInfo(null),
+        hideCancelButton: true,
+      });
+    }
   };
 
   const handleDownloadQuotationImage = async (editedQuotation: QuotationResult | null) => {
@@ -663,7 +803,15 @@ const App: React.FC = () => {
 
   // Show quotation editor
   if (selectedApp === 'quotation') {
-    return <QuotationEditorPage onNavigateBack={() => setSelectedApp('menu')} />;
+    const tenantId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'default';
+    return <QuotationEditorPage
+      tenantId={tenantId}
+      onNavigateBack={() => setSelectedApp('menu')}
+      onNavigateToSettings={() => setSelectedApp('tenant-settings')}
+      onNavigateToItemMasters={() => setSelectedApp('quotation-item-masters')}
+      onNavigateToTemplates={() => setSelectedApp('quotation-templates')}
+      onNavigateToEmailSettings={() => setSelectedApp('email-settings')}
+    />;
   }
 
   // Show sales chatbot
@@ -675,7 +823,25 @@ const App: React.FC = () => {
   if (selectedApp === 'email-settings') {
     // Use Firebase project ID as tenant ID
     const tenantId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'default';
-    return <TenantEmailSettingsPage onNavigateBack={() => setSelectedApp('menu')} tenantId={tenantId} />;
+    return <TenantEmailSettingsPage onNavigateBack={() => setSelectedApp('quotation')} tenantId={tenantId} />;
+  }
+
+  // Show tenant settings
+  if (selectedApp === 'tenant-settings') {
+    const tenantId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'default';
+    return <TenantSettingsPage onNavigateBack={() => setSelectedApp('quotation')} tenantId={tenantId} />;
+  }
+
+  // Show quotation item masters
+  if (selectedApp === 'quotation-item-masters') {
+    const tenantId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'default';
+    return <QuotationItemMasterPage onNavigateBack={() => setSelectedApp('quotation')} tenantId={tenantId} />;
+  }
+
+  // Show quotation templates
+  if (selectedApp === 'quotation-templates') {
+    const tenantId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'default';
+    return <QuotationTemplatePage onNavigateBack={() => setSelectedApp('quotation')} tenantId={tenantId} />;
   }
 
   if (appView === 'database') {
@@ -728,14 +894,34 @@ const App: React.FC = () => {
                   </h3>
                   <div className="space-y-3">
                     {(showAllUpdates ? UPDATE_HISTORY : UPDATE_HISTORY.slice(0, 5)).map((update, index) => (
-                      <div key={index} className="border-l-4 border-blue-400 pl-3">
+                      <div key={index} className="border-l-4 border-blue-400 pl-3 pb-2">
                         <div className="flex items-baseline gap-2 mb-1">
                           <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
                             {update.date}
                           </span>
                           <h4 className="text-sm font-bold text-blue-900">{update.title}</h4>
                         </div>
-                        <p className="text-sm text-blue-800">{update.description}</p>
+                        <p className="text-sm text-blue-800 mb-2">{update.description}</p>
+                        {update.howToUse && (
+                          <button
+                            onClick={() => {
+                              setModalInfo({
+                                title: `使い方: ${update.title}`,
+                                message: (
+                                  <div className="text-left whitespace-pre-wrap text-sm text-gray-700">
+                                    {update.howToUse}
+                                  </div>
+                                ),
+                                confirmText: '閉じる',
+                                onConfirm: () => setModalInfo(null),
+                                hideCancelButton: true,
+                              });
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                          >
+                            使い方確認
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -757,41 +943,13 @@ const App: React.FC = () => {
                 <img src={originalImage} alt="アップロードされた画像" className="absolute inset-0 w-full h-full object-contain rounded-lg" />
                </div>
             )}
-            {!isLoading && !isFinetuningMode && originalImage && activeGeneratedImage && (
+            {!isLoading && !isFinetuningMode && originalImage && activeGeneratedImage && !isQuotationMode && (
               <div className="w-full">
                 {appMode === 'renovation' ? (
-                  <>
-                    { isQuotationMode ? (
-                      <div className="w-full max-w-6xl mx-auto">
-                        <div className="flex flex-col md:flex-row gap-4 items-start">
-                          <div className="w-full md:w-1/2">
-                            <h3 className="text-center text-lg font-bold mb-2 text-emerald-800">リフォーム前</h3>
-                            <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
-                              <img src={originalImage} alt="リフォーム前" className="absolute inset-0 w-full h-full object-contain" />
-                            </div>
-                          </div>
-                          <div className="w-full md:w-1/2">
-                            <h3 className="text-center text-lg font-bold mb-2 text-emerald-800">リフォーム後</h3>
-                            <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
-                              <img src={activeGeneratedImage.src} alt="リフォーム後" className="absolute inset-0 w-full h-full object-contain" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <ComparisonView before={originalImage} after={activeGeneratedImage.src} aspectRatio={displayAspectRatio} />
-                    )}
-                    {activeGeneratedImage.description && !isQuotationMode && (
-                      <div className="mt-6 max-w-4xl mx-auto bg-indigo-50 p-5 rounded-xl border border-indigo-200">
-                        <h4 className="text-md font-bold text-gray-800 mb-2 flex items-center gap-2">
-                          <SparklesIcon className="w-5 h-5 text-indigo-500" />
-                          AIによるリノベーションコンセプト
-                        </h4>
-                        <p className="text-sm text-gray-700 leading-relaxed">{activeGeneratedImage.description}</p>
-                      </div>
-                    )}
-                  </>
-                ) : ( // exterior mode view
+                  <div className="w-full max-w-4xl mx-auto" style={{ aspectRatio: displayAspectRatio }}>
+                    <ComparisonView before={originalImage} after={activeGeneratedImage.src} />
+                  </div>
+                ) : (
                   <div className="w-full max-w-6xl mx-auto">
                     <div className="flex flex-col md:flex-row gap-4 items-start">
                       <div className="w-full md:w-1/2">
@@ -809,6 +967,33 @@ const App: React.FC = () => {
                     </div>
                   </div>
                 )}
+                {activeGeneratedImage.description && appMode === 'renovation' && (
+                  <div className="mt-6 max-w-4xl mx-auto bg-indigo-50 p-5 rounded-xl border border-indigo-200">
+                    <h4 className="text-md font-bold text-gray-800 mb-2 flex items-center gap-2">
+                      <SparklesIcon className="w-5 h-5 text-indigo-500" />
+                      AIによるリノベーションコンセプト
+                    </h4>
+                    <p className="text-sm text-gray-700 leading-relaxed">{activeGeneratedImage.description}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            {!isLoading && !isFinetuningMode && originalImage && activeGeneratedImage && isQuotationMode && (
+              <div className="w-full max-w-6xl mx-auto">
+                <div className="flex flex-col md:flex-row gap-4 items-start">
+                  <div className="w-full md:w-1/2">
+                    <h3 className="text-center text-lg font-bold mb-2 text-emerald-800">リフォーム前</h3>
+                    <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
+                      <img src={originalImage} alt="リフォーム前" className="absolute inset-0 w-full h-full object-contain" />
+                    </div>
+                  </div>
+                  <div className="w-full md:w-1/2">
+                    <h3 className="text-center text-lg font-bold mb-2 text-emerald-800">リフォーム後</h3>
+                    <div className="relative w-full shadow-md rounded-lg overflow-hidden bg-white" style={{ aspectRatio: displayAspectRatio }}>
+                      <img src={activeGeneratedImage.src} alt="リフォーム後" className="absolute inset-0 w-full h-full object-contain" />
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
              {!isLoading && isFinetuningMode && !isQuotationMode && activeGeneratedImage && (
@@ -886,6 +1071,10 @@ const App: React.FC = () => {
                 quotationResult={quotationResult}
                 error={error}
                 onDownloadImage={handleDownloadQuotationImage}
+                onSaveAsFormalQuotation={handleSaveAsFormalQuotation}
+                originalImageUrl={originalImage || undefined}
+                renovatedImageUrl={activeGeneratedImage?.src}
+                tenantId={tenantId}
               />
             ) : (
               <>
@@ -927,9 +1116,9 @@ const App: React.FC = () => {
         </div>
 
         {/* Desktop: Original layout */}
-        <div className="hidden lg:grid lg:grid-cols-12 gap-8 lg:items-start">
-          <div className="lg:col-span-4 xl:col-span-3">
-            <div className={`rounded-xl shadow-lg p-6 space-y-6 sticky top-8 transition-colors duration-300 ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
+        <div className="hidden lg:grid lg:grid-cols-12 gap-8" style={{ height: 'calc(100vh - 10rem)' }}>
+          <div className="lg:col-span-4 xl:col-span-3 overflow-y-auto">
+            <div className={`rounded-xl shadow-lg p-6 space-y-6 transition-colors duration-300 ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
               {isQuotationMode ? (
                 <QuotationPanel
                   appMode={appMode}
@@ -940,6 +1129,10 @@ const App: React.FC = () => {
                   quotationResult={quotationResult}
                   error={error}
                   onDownloadImage={handleDownloadQuotationImage}
+                  onSaveAsFormalQuotation={handleSaveAsFormalQuotation}
+                  originalImageUrl={originalImage || undefined}
+                  renovatedImageUrl={activeGeneratedImage?.src}
+                  tenantId={tenantId}
                 />
               ) : (
                 <>
@@ -979,9 +1172,9 @@ const App: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="lg:col-span-8 xl:col-span-9 sticky top-8 self-start">
+          <div className="lg:col-span-8 xl:col-span-9 overflow-y-auto">
            {originalImage && <ModeSelector />}
-            <div className={`rounded-xl shadow-lg flex items-center justify-center p-4 transition-colors duration-300 ${originalImage ? 'max-h-[calc(100vh-6rem)]' : 'min-h-[400px]'} overflow-y-auto ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
+            <div className={`rounded-xl shadow-lg flex items-center justify-center p-4 transition-colors duration-300 ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
             {isLoading && <Loader messages={
               appMode === 'renovation'
                 ? renovationLoadingMessages
@@ -1005,14 +1198,34 @@ const App: React.FC = () => {
                   </h3>
                   <div className="space-y-3">
                     {(showAllUpdates ? UPDATE_HISTORY : UPDATE_HISTORY.slice(0, 5)).map((update, index) => (
-                      <div key={index} className="border-l-4 border-blue-400 pl-3">
+                      <div key={index} className="border-l-4 border-blue-400 pl-3 pb-2">
                         <div className="flex items-baseline gap-2 mb-1">
                           <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
                             {update.date}
                           </span>
                           <h4 className="text-sm font-bold text-blue-900">{update.title}</h4>
                         </div>
-                        <p className="text-sm text-blue-800">{update.description}</p>
+                        <p className="text-sm text-blue-800 mb-2">{update.description}</p>
+                        {update.howToUse && (
+                          <button
+                            onClick={() => {
+                              setModalInfo({
+                                title: `使い方: ${update.title}`,
+                                message: (
+                                  <div className="text-left whitespace-pre-wrap text-sm text-gray-700">
+                                    {update.howToUse}
+                                  </div>
+                                ),
+                                confirmText: '閉じる',
+                                onConfirm: () => setModalInfo(null),
+                                hideCancelButton: true,
+                              });
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                          >
+                            使い方確認
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1056,7 +1269,9 @@ const App: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <ComparisonView before={originalImage} after={activeGeneratedImage.src} aspectRatio={displayAspectRatio} />
+                      <div className="w-full max-w-4xl mx-auto" style={{ aspectRatio: displayAspectRatio }}>
+                        <ComparisonView before={originalImage} after={activeGeneratedImage.src} />
+                      </div>
                     )}
                     {activeGeneratedImage.description && !isQuotationMode && (
                       <div className="mt-6 max-w-4xl mx-auto bg-indigo-50 p-5 rounded-xl border border-indigo-200">
@@ -1153,16 +1368,15 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
-
       {modalInfo && (
         <ConfirmationModal
-          isOpen={!!modalInfo}
+          isOpen={true}
           title={modalInfo.title}
           message={modalInfo.message}
           confirmText={modalInfo.confirmText}
-          cancelText={modalInfo.cancelText}
           onConfirm={modalInfo.onConfirm}
-          onCancel={modalInfo.onCancel || (() => setModalInfo(null))}
+          cancelText={modalInfo.cancelText}
+          onCancel={modalInfo.onCancel}
           confirmButtonColor={modalInfo.confirmButtonColor}
           hideCancelButton={modalInfo.hideCancelButton}
         />

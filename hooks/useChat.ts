@@ -46,22 +46,25 @@ export const useChat = (systemPrompt: string) => {
     setIsLoading(true);
 
     try {
-      const fullPrompt = `${systemPrompt}\n\n【相談内容】\n${promptOverride || userContent}`;
-      
-      const stream = streamChat(fullPrompt);
+      const actualContent = promptOverride || userContent;
+
+      const stream = streamChat(
+        [{ role: 'user', content: actualContent }],
+        systemPrompt
+      );
 
       for await (const chunk of stream) {
-        setMessages(prev => prev.map((msg, index) => 
-          index === prev.length - 1 
-            ? { ...msg, content: msg.content + chunk } 
+        setMessages(prev => prev.map((msg, index) =>
+          index === prev.length - 1
+            ? { ...msg, content: msg.content + chunk }
             : msg
         ));
       }
     } catch (error) {
       console.error('Streaming chat failed:', error);
-      setMessages(prev => prev.map((msg, index) => 
-        index === prev.length - 1 
-          ? { ...msg, content: 'エラーが発生しました。' } 
+      setMessages(prev => prev.map((msg, index) =>
+        index === prev.length - 1
+          ? { ...msg, content: 'エラーが発生しました。' }
           : msg
       ));
     } finally {
