@@ -90,6 +90,11 @@ jobs:
 
           echo "Created .env file with Firebase configuration for build"
 
+          # Debug: Show .env file contents (masked for security)
+          echo "=== .env file contents ==="
+          cat .env | sed 's/=.*/=***MASKED***/'
+          echo "========================="
+
           # Also set for deployment
           echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID" >> $GITHUB_ENV
 
@@ -100,6 +105,15 @@ jobs:
 
       - name: Build application
         run: npm run build
+
+      - name: Debug - Check built files for env vars
+        run: |
+          echo "=== Checking if env vars are in build ==="
+          if grep -r "VITE_FIREBASE" dist/ 2>/dev/null; then
+            echo "✅ Environment variables found in build"
+          else
+            echo "❌ Environment variables NOT found in build"
+          fi
 
       - name: Debug environment variables
         run: |
