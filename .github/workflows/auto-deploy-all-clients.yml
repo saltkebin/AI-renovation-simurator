@@ -116,6 +116,12 @@ jobs:
             echo "❌ .env NOT found in: $(pwd)"
           fi
 
+      - name: Clean dist folder
+        run: |
+          echo "=== Cleaning old dist folder ==="
+          rm -rf dist
+          echo "=== Dist folder cleaned ==="
+
       - name: Build application
         run: |
           echo "=== Starting Vite build with env vars ==="
