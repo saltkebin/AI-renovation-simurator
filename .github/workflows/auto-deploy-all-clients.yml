@@ -125,10 +125,19 @@ jobs:
       - name: Debug - Check built files for env vars
         run: |
           echo "=== Checking if env vars are in build ==="
-          if grep -r "VITE_FIREBASE" dist/ 2>/dev/null; then
-            echo "✅ Environment variables found in build"
+          echo "Searching for Firebase config in built files..."
+          if grep -r "airenovation" dist/ 2>/dev/null | head -3; then
+            echo "✅ Firebase project ID found in build"
           else
-            echo "❌ Environment variables NOT found in build"
+            echo "❌ Firebase project ID NOT found in build"
+          fi
+
+          echo "---"
+          echo "Searching for API key pattern..."
+          if grep -r "AIzaSy" dist/ 2>/dev/null | head -1; then
+            echo "✅ API key pattern found in build"
+          else
+            echo "❌ API key pattern NOT found in build"
           fi
 
       - name: Debug environment variables
