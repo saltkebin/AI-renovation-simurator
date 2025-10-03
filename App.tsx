@@ -9,15 +9,20 @@ import QuotationPanel from './components/QuotationPanel';
 import ErrorDisplay from './components/ErrorDisplay';
 import ConfirmationModal from './components/ConfirmationModal';
 import DatabasePage from './components/DatabasePage';
-import PinAuth from './components/PinAuth'; // Import the PinAuth component
+import PinAuth from './components/PinAuth';
+import MainMenu from './components/MainMenu';
+import QuotationChatBot from './components/QuotationChatBot';
+import SalesChatBot from './components/SalesChatBot';
+import TenantEmailSettingsPage from './components/TenantEmailSettingsPage';
 import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts, generateExteriorPaintingQuotation } from './services/geminiService';
 import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory, ExteriorSubMode } from './types';
 import { RENOVATION_PROMPTS, OMAKASE_PROMPT, UPDATE_HISTORY } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
-import { db, verifyPin } from './services/firebase'; // Import verifyPin
+import { db, verifyPin } from './services/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 
 type AppView = 'main' | 'database';
+type SelectedApp = 'menu' | 'renovation' | 'quotation' | 'email-settings' | 'sales-chatbot';
 
 interface ModalInfo {
   title: string;
@@ -31,7 +36,8 @@ interface ModalInfo {
 }
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false); // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [selectedApp, setSelectedApp] = useState<SelectedApp>('menu');
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [activeGeneratedImage, setActiveGeneratedImage] = useState<GeneratedImage | null>(null);
@@ -650,9 +656,29 @@ const App: React.FC = () => {
     return <Loader messages={["アプリを起動中..."]} />;
   }
 
+  // Show main menu
+  if (selectedApp === 'menu') {
+    return <MainMenu onSelectApp={setSelectedApp} />;
+  }
+
+  // Show quotation chatbot
+  if (selectedApp === 'quotation') {
+    return <QuotationChatBot onNavigateBack={() => setSelectedApp('menu')} />;
+  }
+
+  // Show sales chatbot
+  if (selectedApp === 'sales-chatbot') {
+    return <SalesChatBot onNavigateBack={() => setSelectedApp('menu')} />;
+  }
+
+  // Show email settings
+  if (selectedApp === 'email-settings') {
+    return <TenantEmailSettingsPage onNavigateBack={() => setSelectedApp('menu')} />;
+  }
+
   if (appView === 'database') {
-    return <DatabasePage 
-            onNavigateBack={() => setAppView('main')} 
+    return <DatabasePage
+            onNavigateBack={() => setAppView('main')}
             categories={categories}
             products={products}
             setCategories={setCategories}
@@ -662,7 +688,13 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 flex flex-col">
-      <Header onNavigate={setAppView} />
+      <Header onNavigate={(view) => {
+        if (view === 'menu') {
+          setSelectedApp('menu');
+        } else {
+          setAppView(view);
+        }
+      }} />
       <main className="flex-grow container mx-auto p-4 md:p-8">
         {/* Mobile: Image area first, then controls */}
         <div className="lg:hidden">

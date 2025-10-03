@@ -713,3 +713,43 @@ export const generateExteriorPaintingQuotation = async (
         throw new Error(`Gemini API request failed for exterior painting quotation: ${error instanceof Error ? error.message : String(error)}`);
     }
 };
+
+/**
+ * Stream chat responses from Gemini AI
+ */
+export async function* streamChat(
+  messages: Array<{ role: string; content: string }>,
+  systemInstruction?: string
+): AsyncGenerator<string, void, unknown> {
+  try {
+    const contents = messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+
+    const config: any = {
+      temperature: 0.7,
+      topK: 40,
+      topP: 0.95,
+    };
+
+    if (systemInstruction) {
+      config.systemInstruction = systemInstruction;
+    }
+
+    const stream = await ai.models.generateContentStream({
+      model: 'gemini-2.0-flash-exp',
+      contents,
+      config
+    });
+
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        yield chunk.text;
+      }
+    }
+  } catch (error) {
+    console.error("Error in streamChat:", error);
+    throw error;
+  }
+}

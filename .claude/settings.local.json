@@ -31,7 +31,10 @@
       "Bash(curl -s https://airenovation2.web.app/index.html)",
       "Bash(gh run list:*)",
       "Bash(curl -s \"https://airenovation2.web.app/\")",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(awk:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
