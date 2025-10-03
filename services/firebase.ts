@@ -13,6 +13,15 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+// Debug: Log config (only in development)
+console.log('🔧 Firebase Config:', {
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasAuthDomain: !!firebaseConfig.authDomain,
+  hasProjectId: !!firebaseConfig.projectId,
+  projectId: firebaseConfig.projectId,
+  apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'undefined'
+});
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
