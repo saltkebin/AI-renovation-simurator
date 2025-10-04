@@ -10,11 +10,11 @@ interface HelpTooltipProps {
 const HelpTooltip: React.FC<HelpTooltipProps> = ({ text, position = 'top' }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const spanRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    if (isVisible && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
+    if (isVisible && spanRef.current) {
+      const rect = spanRef.current.getBoundingClientRect();
       const tooltipWidth = 256; // w-64 = 256px
       const tooltipHeight = 80; // 概算
 
@@ -56,17 +56,28 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ text, position = 'top' }) => 
 
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
+      <span
+        ref={spanRef}
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
-        onClick={() => setIsVisible(!isVisible)}
-        className="inline-flex items-center justify-center focus:outline-none ml-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsVisible(!isVisible);
+        }}
+        className="inline-flex items-center justify-center ml-1 cursor-help"
+        role="button"
+        tabIndex={0}
         aria-label="ヘルプ"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsVisible(!isVisible);
+          }
+        }}
       >
         <QuestionMarkCircleIcon className="w-4 h-4 text-gray-400 hover:text-indigo-600 cursor-help transition-colors" />
-      </button>
+      </span>
 
       {isVisible && createPortal(
         <div

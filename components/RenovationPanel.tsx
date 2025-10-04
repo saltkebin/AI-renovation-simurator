@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // FIX: Import AppMode type.
 import type { RenovationMode, FurnitureStyleId, RoomTypeId, RegisteredProduct, ProductCategory, ArchOption, AppMode, SketchCategory, SketchFinetuneTabId, SketchFinetuneOption, ExteriorSubMode, ColorMode, RenovationSubMode, FacilityType, OriginalSpaceType, CommercialStep, CommercialRenovationContext } from '../types';
-import { RENOVATION_CATEGORIES, OMAKASE_PROMPT, OMAKASE_SKETCH_PROMPT, FURNITURE_STYLES, ROOM_TYPES, SKETCH_CATEGORIES, SKETCH_FINETUNE_TABS, EXTERIOR_COLORS, EXTERIOR_MATERIALS, SPLIT_RATIOS, TUTORIAL_PRODUCTS, FACILITY_TYPES, ORIGINAL_SPACE_TYPES, COMMERCIAL_STEPS } from '../constants';
+import { RENOVATION_CATEGORIES, OMAKASE_PROMPT, OMAKASE_SKETCH_PROMPT, FURNITURE_STYLES, ROOM_TYPES, SKETCH_CATEGORIES, SKETCH_FINETUNE_TABS, EXTERIOR_COLORS, EXTERIOR_MATERIALS, SPLIT_RATIOS, TUTORIAL_PRODUCTS, FACILITY_TYPES, ORIGINAL_SPACE_TYPES, COMMERCIAL_STEPS, FACILITY_ADJUSTMENT_ITEMS } from '../constants';
 import { MagicWandIcon, EditIcon, SparklesIcon, LightBulbIcon, SpinnerIcon, ArrowUturnLeftIcon, SofaIcon, UserGroupIcon, BuildingStorefrontIcon, HomeModernIcon, CubeIcon, SwatchIcon, DocumentTextIcon, PencilIcon, PaintBrushIcon, TrashIcon } from './Icon';
 import { generateSuggestions } from '../services/geminiService';
 import FeatureTip from './FeatureTip';
