@@ -372,6 +372,50 @@ export interface UpdateInfo {
 
 export const UPDATE_HISTORY: UpdateInfo[] = [
   {
+    date: '2025-10-04',
+    title: 'インタラクティブチュートリアル機能を追加',
+    description: '実際の操作を体験しながら学べる12ステップのガイド付きチュートリアルを追加。初めてのユーザーでも迷わず基本機能を習得できます。',
+    howToUse: `【チュートリアルの開始方法】
+メインメニューから「チュートリアル」を選択すると、ステップバイステップのガイドが始まります。
+
+【チュートリアルの内容】
+Step 1-2: 画像アップロードと比較スライダーの使い方
+Step 3-5: テイストプロンプトの選択と画像生成
+Step 6-8: 微調整モードでのカスタマイズ
+Step 9-10: 詳細設定（家具・人物配置）
+Step 11: 商品配置のシミュレーション
+Step 12: 画像のダウンロード
+
+【チュートリアルの特徴】
+・各ステップで実際の操作を体験
+・次に何をすべきか矢印とハイライトで明示
+・いつでもスキップ・終了が可能
+・進行状況バーで全体の進捗を確認
+
+初回利用時やスタッフ研修に最適です。`
+  },
+  {
+    date: '2025-10-04',
+    title: 'AIユーザーガイド（チャット形式）を追加',
+    description: 'AIアシスタントに質問しながら使い方を学べるユーザーガイド機能を追加。各機能の説明やよくある質問への回答をチャット形式で確認できます。',
+    howToUse: `【ユーザーガイドの使い方】
+メインメニューから「ユーザーガイド」を選択すると、AIチャットボット形式のガイドが利用できます。
+
+【主な機能】
+1. はじめに：システムの概要と基本的な使い方
+2. AIリノベーション：画像生成機能の詳細な使い方
+3. 外壁塗装・パース生成：外観関連機能の説明
+4. 見積もり機能：概算見積もりと本格見積もりの使い方
+5. よくある質問：トラブルシューティングとTIPS
+
+【チャット機能】
+・左側のセクションボタンをクリックして情報を表示
+・右側のチャットで分からないことを質問
+・AIが具体的な操作手順や解決方法を回答
+
+チュートリアルと併せて使うとより効果的です。`
+  },
+  {
     date: '2025-10-03',
     title: '機能ガイドTIPSを追加',
     description: '各機能のタイトル横に「?」ボタンを追加。クリック・ホバーで活用方法のヒントが表示され、機能をより効果的に使えるようになりました。',
@@ -450,3 +494,204 @@ export const UPDATE_HISTORY: UpdateInfo[] = [
 ※複数の色パターンを試して、顧客に最適な提案ができます。`
   },
 ];
+
+// ヘルプテキスト定数
+export const HELP_TEXTS = {
+  // 画像アップロード関連
+  imageUpload: '室内・外観の写真、または手書きスケッチをアップロードしてください。HEIC形式も自動でJPEGに変換されます。ファイルサイズは5MB以下を推奨します。',
+  imageSwitch: '別の画像に切り替えたい場合は、このボタンで新しい画像をアップロードできます。現在の生成履歴はクリアされます。',
+
+  // モード選択関連
+  renovationMode: '室内のリノベーションシミュレーションを行います。70種類以上のスタイルから選べます。',
+  exteriorMode: '外観デザインと外壁塗装シミュレーションを行います。手書きスケッチから3Dパースの生成も可能です。',
+
+  // リノベーション機能
+  finetuningMode: '生成した画像をさらに調整できます。「もう少し明るく」「家具を増やして」など、追加の指示を与えられます。',
+  productsMode: '登録済みの壁紙・家具・塗料を使ったリノベーションができます。実際の商品を使ったシミュレーションが可能です。',
+  omakaseMode: 'AIが画像を分析し、最適なスタイルを自動で提案します。どれを選べばいいか迷ったらこちらがおすすめです。',
+
+  // 見積もり関連
+  quotationMode: '生成した画像を基に、AI が概算見積もりを作成します。床材・壁材・ケーシングを入力すると、工事項目と費用を自動算出します。',
+  floorMaterial: '使用する床材を入力してください。例: 無垢材フローリング、複合フローリング、タイルなど',
+  wallMaterial: '使用する壁材を入力してください。例: 珪藻土、漆喰、クロス、タイルなど',
+  casingMaterial: '窓枠やドア枠の素材を入力してください。例: 木製、アルミ、樹脂など',
+  wallArea: '建物の外壁面積を㎡単位で入力してください。未入力の場合、AIが画像から推定します。',
+  paintType: '使用する塗料の種類を選択してください。耐用年数や価格が異なります。「AIにおまかせ」を選ぶと最適な塗料を提案します。',
+  saveQuotation: '概算見積もりを保存すると、メインメニューの「本格見積もり管理」から詳細な編集ができます。顧客情報も入力できます。',
+
+  // スケッチ機能
+  sketch2arch: '手書きのスケッチから、フォトリアルな3Dパースを生成します。間取り図や外観イラストから完成予想図を作成できます。',
+
+  // 外壁塗装
+  exteriorPainting: '建物の外観写真をアップロードし、様々な色で塗装シミュレーションができます。単色・ツートンカラーに対応しています。',
+
+  // 履歴・ダウンロード
+  historyPanel: '生成した画像の履歴です。クリックすると過去の画像を再表示できます。最新20件まで保存されます。',
+  downloadImage: '表示中の画像をダウンロードします。ファイル名には生成日時が自動で付きます。',
+
+  // その他
+  clearAll: '全ての生成画像と履歴をクリアし、最初からやり直します。保存していないデータは失われます。',
+  comparison: 'スライダーを左右に動かすと、リノベーション前後の画像を比較できます。細かい変化も確認しやすくなります。',
+};
+
+// チュートリアルステップデータ
+export interface TutorialStep {
+  id: number;
+  title: string;
+  description: string;
+  hint?: string;
+  action: 'auto' | 'click' | 'wait' | null;
+  highlightTarget?: string;
+  buttonText?: string;
+}
+
+export const TUTORIAL_RENOVATION_STEPS: TutorialStep[] = [
+  {
+    id: 1,
+    title: 'ステップ1: 画像をアップロード',
+    description: 'リノベーションしたい室内の写真をアップロードしましょう。下の「サンプル画像を使用」ボタンをクリックしてください。',
+    hint: '実際の使用では、ドラッグ&ドロップまたはファイル選択で画像をアップロードできます。HEIC形式も自動変換されます。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 2,
+    title: 'ステップ2: ワンタップおまかせリノベーション',
+    description: 'AIが自動で最適なリノベーション案を提案します。「ワンタップおまかせリノベーション」ボタンをクリックしてください。',
+    hint: '一番簡単な方法です。AIが画像を分析し、最適なスタイルを自動で選んでリノベーション案を生成します。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 3,
+    title: 'ステップ3: 画像を生成完了！',
+    description: 'AIがリノベーション後の画像を生成しました！スライダーを動かすと、Before/Afterを比較できます。',
+    hint: '実際の使用では通常15-30秒かかりますが、チュートリアルでは即座に表示されます。',
+    action: null,
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 4,
+    title: 'ステップ4: スタイルを選んでみよう',
+    description: '50種類のスタイルから選べます。「デザインテイスト」のアコーディオンを開いて、「ミニマリスト」を選択してください。',
+    hint: '各カテゴリを開くと、様々なスタイルが選べます。お客様の好みに合わせて選択できます。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 5,
+    title: 'ステップ5: スタイル適用完了！',
+    description: 'ミニマリストスタイルが適用されました！スライダーを動かして、先ほどとの違いを比較してみてください。',
+    hint: '異なるスタイルを試すことで、お客様に複数の提案ができます。',
+    action: null,
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 6,
+    title: 'ステップ6: 生成履歴から画像を選択',
+    description: '右側の「生成履歴」から、ミニマリストスタイルの画像（2番目の画像）をクリックして選択してください。この画像を次のステップで使用します。',
+    hint: '生成履歴を使うことで、過去の提案を簡単に見返すことができます。お客様に複数案を提示する際に便利です。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 7,
+    title: 'ステップ7: 微調整モードで細かな調整',
+    description: '「この画像を微調整する」ボタンが表示されています。クリックして微調整モードに入りましょう。',
+    hint: '微調整モードでは、家具の追加・削除、人物の追加・削除、詳細なプロンプト指定、商品の配置などができます。※微調整モードでなくてもこれらの機能は使用できますが、ここでは微調整モード内としての説明を行います。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 8,
+    title: 'ステップ8: 家具タブを試す',
+    description: '「家具」タブをクリックして、「中央にラグを置いて」と入力してください。',
+    hint: '家具の配置を変更することで、より具体的な提案ができます。テキストで指示を出すだけで簡単に家具を追加できます。また、「AIおすすめ追加/削除案」ボタンを使えば、AIが自動で家具の配置案を提案してくれます。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 9,
+    title: 'ステップ9: 人物タブを確認',
+    description: '「人物」タブをクリックしてみましょう。人物の追加・削除ができます。',
+    hint: '人物を配置することで、空間の使い方をイメージしやすくなります。また、「AIおすすめ人物配置案」ボタンを使えば、AIが自動で人物の配置案を提案してくれます。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 10,
+    title: 'ステップ10: 詳細タブで自由に指定',
+    description: '「詳細」タブをクリックしてみましょう。テキストで詳細な指示を与えられます。',
+    hint: '「窓際に観葉植物を置く」など、具体的な指示が可能です。また、「AIおすすめ修正案」ボタンを使えば、AIが自動で修正案を提案してくれます。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 11,
+    title: 'ステップ11: 商品タブで実際の商品を配置',
+    description: '生成履歴からミニマリスト画像を選び、「この画像を微調整する」をクリック。「商品」タブをクリックし、カテゴリーを「家具」に選択、ソファを選んで「このソファを奥の壁に置いて」と入力して[修正を生成]ボタンを押してみましょう。',
+    hint: '実際に販売する商品を提案に含めることで、より具体的な見積もりにつながります。商品は事前にデータベースに登録しておく必要があります。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 12,
+    title: 'ステップ12: ダウンロード',
+    description: '右側の「ダウンロード」ボタンをクリックして、生成した画像を保存してみましょう。',
+    hint: 'ダウンロードした画像は、提案資料やプレゼンテーションに使用できます。',
+    action: 'wait',
+    highlightTarget: null,
+    buttonText: null,
+  },
+  {
+    id: 13,
+    title: 'チュートリアル完了！',
+    description: 'お疲れさまでした！画像生成から微調整、ダウンロードまでの一連の流れを学びました。実際の物件画像でぜひ試してみてください。',
+    hint: 'メインメニューに戻って、他の機能も探索してみましょう。見積もり機能なども活用できます。',
+    action: null,
+    highlightTarget: null,
+    buttonText: '完了してメニューへ',
+  },
+];
+
+// チュートリアル用サンプル画像パス
+export const TUTORIAL_SAMPLE_IMAGES = {
+  renovation: {
+    before: '/images/tutorial/sample-room-before.png',
+    scandinavian: '/images/tutorial/sample-room-scandinavian.png',
+    minimalist: '/images/tutorial/sample-room-minimalist.png',
+    minimalistWithRug: '/images/tutorial/sample-room-minimalist-rag.png',
+    minimalistWithRugAndChild: '/images/tutorial/sample-room-minimalist-rag-child.png',
+    minimalistPlayroom: '/images/tutorial/sample-room-minimalist-rag-childroom.png',
+    minimalistWithSofa: '/images/tutorial/sample-room-minimalist-sofa2.png',
+  },
+};
+
+// チュートリアル用商品データ
+export const TUTORIAL_PRODUCTS = {
+  categories: [
+    { id: 'tutorial-furniture', name: '家具' }
+  ],
+  products: [
+    {
+      id: 'tutorial-sofa-1',
+      name: 'チェスターフィールドソファ',
+      categoryId: 'tutorial-furniture',
+      categoryName: '家具',
+      imageUrl: '/images/tutorial/products/sofa.jpeg',
+      description: 'クラシックなチェスターフィールドスタイルのソファ',
+      price: 150000,
+    }
+  ]
+};

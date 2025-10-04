@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
 import RenovationPanel from './components/RenovationPanel';
@@ -17,18 +19,22 @@ import TenantEmailSettingsPage from './components/TenantEmailSettingsPage';
 import TenantSettingsPage from './components/TenantSettingsPage';
 import QuotationItemMasterPage from './components/QuotationItemMasterPage';
 import QuotationTemplatePage from './components/QuotationTemplatePage';
+import UserGuidePage from './components/UserGuidePage';
+import TutorialPage from './components/TutorialPage';
+import TutorialStep from './components/TutorialStep';
 import type { CustomerInfo } from './components/CustomerInfoModal';
 import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts, generateExteriorPaintingQuotation } from './services/geminiService';
 import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory, ExteriorSubMode } from './types';
-import { RENOVATION_PROMPTS, OMAKASE_PROMPT, UPDATE_HISTORY } from './constants';
+import { RENOVATION_PROMPTS, OMAKASE_PROMPT, UPDATE_HISTORY, HELP_TEXTS, TUTORIAL_RENOVATION_STEPS, TUTORIAL_SAMPLE_IMAGES } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
 import FeatureTip from './components/FeatureTip';
+import HelpTooltip from './components/HelpTooltip';
 import { db, storage, verifyPin } from './services/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 type AppView = 'main' | 'database';
-type SelectedApp = 'menu' | 'renovation' | 'quotation' | 'email-settings' | 'sales-chatbot' | 'tenant-settings' | 'quotation-item-masters' | 'quotation-templates';
+type SelectedApp = 'menu' | 'renovation' | 'quotation' | 'email-settings' | 'sales-chatbot' | 'tenant-settings' | 'quotation-item-masters' | 'quotation-templates' | 'user-guide' | 'tutorial';
 
 interface ModalInfo {
   title: string;
@@ -39,32 +45,91 @@ interface ModalInfo {
   onCancel?: () => void;
   confirmButtonColor?: 'red' | 'indigo';
   hideCancelButton?: boolean;
+  nextAction?: string;
 }
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [selectedApp, setSelectedApp] = useState<SelectedApp>('menu');
-  const [originalImage, setOriginalImage] = useState<string | null>(null);
-  const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
-  const [activeGeneratedImage, setActiveGeneratedImage] = useState<GeneratedImage | null>(null);
+
+  // Tutorial states
+  const [tutorialMode, setTutorialMode] = useState<boolean>(false);
+  const [tutorialStepIndex, setTutorialStepIndex] = useState<number>(0);
+  const [tutorialSliderUsed, setTutorialSliderUsed] = useState<boolean>(false);
+  const [tutorialHistoryViewed, setTutorialHistoryViewed] = useState<Set<string>>(new Set());
+  const [tutorialMinimalistSelected, setTutorialMinimalistSelected] = useState<boolean>(false);
+  const [tutorialFurnitureTabClicked, setTutorialFurnitureTabClicked] = useState<boolean>(false);
+  const [tutorialFurnitureInputValid, setTutorialFurnitureInputValid] = useState<boolean>(false);
+  const [tutorialFurnitureImageGenerated, setTutorialFurnitureImageGenerated] = useState<boolean>(false);
+  const [tutorialPersonTabClicked, setTutorialPersonTabClicked] = useState<boolean>(false);
+  const [tutorialPersonInputValid, setTutorialPersonInputValid] = useState<boolean>(false);
+  const [tutorialPersonImageGenerated, setTutorialPersonImageGenerated] = useState<boolean>(false);
+  const [tutorialProductsTabClicked, setTutorialProductsTabClicked] = useState<boolean>(false);
+  const [tutorialProductsImageGenerated, setTutorialProductsImageGenerated] = useState<boolean>(false);
+  const [tutorialStep11HistorySelected, setTutorialStep11HistorySelected] = useState<boolean>(false);
+  const [tutorialStep11FinetuneStarted, setTutorialStep11FinetuneStarted] = useState<boolean>(false);
+  const [tutorialStep11TabClicked, setTutorialStep11TabClicked] = useState<boolean>(false);
+  const [tutorialStep11ProductSelected, setTutorialStep11ProductSelected] = useState<boolean>(false);
+  const [tutorialStep11InputValid, setTutorialStep11InputValid] = useState<boolean>(false);
+  const [tutorialStep11ImageGenerated, setTutorialStep11ImageGenerated] = useState<boolean>(false);
+  const [tutorialStep12DownloadClicked, setTutorialStep12DownloadClicked] = useState<boolean>(false);
+
+  // 永続化する状態（ページリロード時も保持）
+  const [originalImage, setOriginalImage] = useLocalStorage<string | null>('airenovation-originalImage', null);
+  const [generatedImages, setGeneratedImages] = useLocalStorage<GeneratedImage[]>('airenovation-generatedImages', []);
+  const [activeGeneratedImage, setActiveGeneratedImage] = useLocalStorage<GeneratedImage | null>('airenovation-activeGeneratedImage', null);
+  const [appMode, setAppMode] = useLocalStorage<AppMode>('airenovation-appMode', 'renovation');
+  const [exteriorSubMode, setExteriorSubMode] = useLocalStorage<ExteriorSubMode>('airenovation-exteriorSubMode', 'sketch2arch');
+  const [mimeType, setMimeType] = useLocalStorage<string>('airenovation-mimeType', '');
+  const [displayAspectRatio, setDisplayAspectRatio] = useLocalStorage<string>('airenovation-displayAspectRatio', 'auto');
+  const [originalImageAspectRatio, setOriginalImageAspectRatio] = useLocalStorage<string>('airenovation-originalImageAspectRatio', '4:3');
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true); // For initial data load
   const [error, setError] = useState<string | null>(null);
-  const [mimeType, setMimeType] = useState<string>('');
   const [isFinetuningMode, setIsFinetuningMode] = useState<boolean>(false);
   const [isQuotationMode, setIsQuotationMode] = useState<boolean>(false);
   const [isQuoting, setIsQuoting] = useState<boolean>(false);
   const [quotationResult, setQuotationResult] = useState<QuotationResult | null>(null);
-  const [displayAspectRatio, setDisplayAspectRatio] = useState<string>('auto');
-  const [originalImageAspectRatio, setOriginalImageAspectRatio] = useState<string>('4:3');
-  const [appMode, setAppMode] = useState<AppMode>('renovation');
-  const [exteriorSubMode, setExteriorSubMode] = useState<ExteriorSubMode>('sketch2arch');
   const [appView, setAppView] = useState<AppView>('main');
   const [showAllUpdates, setShowAllUpdates] = useState<boolean>(false);
   const [modalInfo, setModalInfo] = useState<ModalInfo | null>(null);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [products, setProducts] = useState<RegisteredProduct[]>([]);
   const [tenantId] = useState<string>('airenovation2'); // テナントID
+
+  // ページロード時に状態が復元されたことを通知
+  useEffect(() => {
+    if (originalImage && generatedImages.length > 0) {
+      toast.success('前回の作業を復元しました', { duration: 2000 });
+    }
+  }, []); // 初回レンダリング時のみ実行
+
+  // Reset tutorial state when leaving tutorial
+  useEffect(() => {
+    if (selectedApp !== 'tutorial' && tutorialMode) {
+      setTutorialMode(false);
+      setTutorialStepIndex(0);
+      setTutorialSliderUsed(false);
+      setTutorialHistoryViewed(new Set());
+      setTutorialMinimalistSelected(false);
+      setTutorialFurnitureTabClicked(false);
+      setTutorialFurnitureInputValid(false);
+      setTutorialFurnitureImageGenerated(false);
+      setTutorialPersonTabClicked(false);
+      setTutorialPersonInputValid(false);
+      setTutorialPersonImageGenerated(false);
+      setTutorialProductsTabClicked(false);
+      setTutorialProductsImageGenerated(false);
+      setTutorialStep11HistorySelected(false);
+      setTutorialStep11FinetuneStarted(false);
+      setTutorialStep11TabClicked(false);
+      setTutorialStep11ProductSelected(false);
+      setTutorialStep11InputValid(false);
+      setTutorialStep11ImageGenerated(false);
+      resetState();
+    }
+  }, [selectedApp, tutorialMode]);
 
   useEffect(() => {
     if (!isAuthenticated) return; // Don't fetch data if not authenticated
@@ -96,7 +161,9 @@ const App: React.FC = () => {
 
       } catch (e) {
         console.error("Failed to load data from Firestore", e);
-        setError("商品データベースの読み込みに失敗しました。ページをリロードして再度お試しください。");
+        const errorMessage = "商品データベースの読み込みに失敗しました。ページをリロードして再度お試しください。";
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setIsInitialLoading(false);
       }
@@ -113,13 +180,13 @@ const App: React.FC = () => {
     setOriginalImage(null);
     setGeneratedImages([]);
     setActiveGeneratedImage(null);
-    setError(null);
     setMimeType('');
+    setDisplayAspectRatio('auto');
+    setOriginalImageAspectRatio('4:3');
+    setError(null);
     setIsFinetuningMode(false);
     setIsQuotationMode(false);
     setQuotationResult(null);
-    setDisplayAspectRatio('auto');
-    setOriginalImageAspectRatio('4:3');
   };
 
   const performSwitch = useCallback((newMode: AppMode) => {
@@ -130,7 +197,7 @@ const App: React.FC = () => {
     setIsFinetuningMode(false);
     setIsQuotationMode(false);
     setQuotationResult(null);
-    
+
     // 表示アスペクト比をオリジナル画像のものに戻す
     if (originalImage) {
       const img = new Image();
@@ -139,9 +206,9 @@ const App: React.FC = () => {
       };
       img.src = originalImage;
     }
-    
+
     setAppMode(newMode);
-  }, [originalImage]);
+  }, [originalImage, setGeneratedImages, setActiveGeneratedImage, setDisplayAspectRatio, setAppMode]);
 
   const handleAppModeChange = (newMode: AppMode) => {
     if (appMode === newMode || isLoading) {
@@ -154,6 +221,7 @@ const App: React.FC = () => {
         message: 'モードを切り替えると、生成された画像はすべてクリアされます。よろしいですか？',
         confirmText: 'はい、切り替える',
         confirmButtonColor: 'red',
+        nextAction: '現在の生成履歴がクリアされ、新しいモードで最初から画像生成を開始します。',
         onConfirm: () => {
           performSwitch(newMode);
           setModalInfo(null);
@@ -166,6 +234,189 @@ const App: React.FC = () => {
     }
   };
 
+  // Tutorial handlers
+  const handleStartTutorial = () => {
+    resetState();
+    setTutorialMode(true);
+    setTutorialStepIndex(0);
+    setSelectedApp('tutorial');
+    setAppMode('renovation');
+  };
+
+  const handleTutorialNext = () => {
+    if (tutorialStepIndex < TUTORIAL_RENOVATION_STEPS.length - 1) {
+      setTutorialStepIndex(tutorialStepIndex + 1);
+      setTutorialSliderUsed(false); // Reset for next step
+
+      // Step 10に移行する時、Step 9のフラグをリセット
+      if (tutorialStepIndex === 8) {
+        setTutorialProductsTabClicked(false);
+        setTutorialProductsImageGenerated(false);
+      }
+
+      // Step 11に移行する時、微調整モードと選択画像をリセット
+      if (tutorialStepIndex === 9) {
+        setIsFinetuningMode(false);
+        setActiveGeneratedImage(null);
+      }
+    } else {
+      handleExitTutorial();
+    }
+  };
+
+  const handleTutorialPrev = () => {
+    if (tutorialStepIndex > 0) {
+      setTutorialStepIndex(tutorialStepIndex - 1);
+      setTutorialSliderUsed(false); // Reset for previous step
+    }
+  };
+
+  const handleExitTutorial = () => {
+    setTutorialMode(false);
+    setTutorialStepIndex(0);
+    setTutorialSliderUsed(false);
+    setTutorialHistoryViewed(new Set());
+    setTutorialMinimalistSelected(false);
+    setTutorialFurnitureTabClicked(false);
+    setTutorialFurnitureInputValid(false);
+    setTutorialFurnitureImageGenerated(false);
+    setTutorialPersonTabClicked(false);
+    setTutorialPersonInputValid(false);
+    setTutorialPersonImageGenerated(false);
+    setTutorialProductsTabClicked(false);
+    setTutorialProductsImageGenerated(false);
+    setTutorialStep11HistorySelected(false);
+    setTutorialStep11FinetuneStarted(false);
+    setTutorialStep11TabClicked(false);
+    setTutorialStep11ProductSelected(false);
+    setTutorialStep11InputValid(false);
+    setTutorialStep11ImageGenerated(false);
+    setTutorialStep12DownloadClicked(false);
+    setSelectedApp('menu');
+    resetState();
+  };
+
+  const handleSkipTutorial = () => {
+    handleExitTutorial();
+  };
+
+  const handleTutorialHistoryClick = (imageUrl: string, imageIndex: number) => {
+    if (!tutorialMode) return;
+
+    if (tutorialStepIndex === 5) {
+      setTutorialHistoryViewed(prev => new Set([...prev, imageUrl]));
+
+      // Check if minimalist image was selected (first generated image, index 0)
+      if (imageIndex === 0) {
+        setTutorialMinimalistSelected(true);
+      } else {
+        setTutorialMinimalistSelected(false);
+      }
+    } else if (tutorialStepIndex === 10) {
+      // Step 11: Check by description field
+      const selectedImage = generatedImages[imageIndex];
+      if (selectedImage && selectedImage.description === 'tutorial-minimalist') {
+        setTutorialStep11HistorySelected(true);
+      }
+    }
+  };
+
+  const handleTutorialFurnitureTabClick = () => {
+    if (!tutorialMode || tutorialStepIndex !== 7) return;
+    setTutorialFurnitureTabClicked(true);
+  };
+
+  const handleTutorialFurnitureInputChange = (text: string) => {
+    if (!tutorialMode || tutorialStepIndex !== 7) return;
+
+    // Check if text matches the required input
+    if (text === '中央にラグを置いて') {
+      setTutorialFurnitureInputValid(true);
+    } else {
+      setTutorialFurnitureInputValid(false);
+    }
+  };
+
+  const handleTutorialPersonTabClick = () => {
+    if (!tutorialMode || tutorialStepIndex !== 8) return;
+    setTutorialPersonTabClicked(true);
+  };
+
+  const handleTutorialPersonInputChange = (text: string) => {
+    if (!tutorialMode || tutorialStepIndex !== 8) return;
+
+    // Check if text matches the required input
+    if (text === '子供が寝転がっている') {
+      setTutorialPersonInputValid(true);
+    } else {
+      setTutorialPersonInputValid(false);
+    }
+  };
+
+  const handleTutorialProductsTabClick = () => {
+    if (!tutorialMode || tutorialStepIndex !== 9) return;
+    setTutorialProductsTabClicked(true);
+  };
+
+  const handleTutorialStep11TabClick = () => {
+    if (!tutorialMode || tutorialStepIndex !== 10) return;
+    setTutorialStep11TabClicked(true);
+  };
+
+  const handleTutorialStep11ProductSelect = (productId: string) => {
+    if (!tutorialMode || tutorialStepIndex !== 10) return;
+    if (productId === 'tutorial-sofa-1') {
+      setTutorialStep11ProductSelected(true);
+    }
+  };
+
+  const handleTutorialStep11InputChange = (text: string) => {
+    if (!tutorialMode || tutorialStepIndex !== 10) return;
+    if (text === 'このソファを奥の壁に置いて') {
+      setTutorialStep11InputValid(true);
+    } else {
+      setTutorialStep11InputValid(false);
+    }
+  };
+
+  const handleUseSampleImage = async () => {
+    if (!tutorialMode) return;
+
+    try {
+      // Fetch sample image
+      const response = await fetch(TUTORIAL_SAMPLE_IMAGES.renovation.before);
+      const blob = await response.blob();
+      const file = new File([blob], 'sample-room.png', { type: 'image/png' });
+
+      // Process the file as if uploaded
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const imageUrl = reader.result as string;
+        setOriginalImage(imageUrl);
+        setMimeType('image/png');
+
+        const img = new Image();
+        img.onload = () => {
+          const aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+          const aspectRatioForPrompt = `${img.naturalWidth}:${img.naturalHeight}`;
+          setDisplayAspectRatio(aspectRatio);
+          setOriginalImageAspectRatio(aspectRatioForPrompt);
+          toast.success('サンプル画像を読み込みました');
+
+          // Auto-advance to next step
+          if (tutorialStepIndex === 0) {
+            setTimeout(() => setTutorialStepIndex(1), 500);
+          }
+        };
+        img.src = imageUrl;
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Failed to load sample image:', error);
+      toast.error('サンプル画像の読み込みに失敗しました');
+    }
+  };
+
   const handleImageUpload = (file: File) => {
     const processUpload = () => {
       resetState();
@@ -175,18 +426,21 @@ const App: React.FC = () => {
         setOriginalImage(imageUrl);
         setMimeType(file.type);
         setAppMode('renovation');
-        
+
         const img = new Image();
         img.onload = () => {
           const aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
           const aspectRatioForPrompt = `${img.naturalWidth}:${img.naturalHeight}`;
           setDisplayAspectRatio(aspectRatio);
           setOriginalImageAspectRatio(aspectRatioForPrompt);
+          toast.success('画像をアップロードしました');
         };
         img.src = imageUrl;
       };
       reader.onerror = () => {
-        setError('画像の読み込みに失敗しました。');
+        const errorMessage = '画像の読み込みに失敗しました。';
+        setError(errorMessage);
+        toast.error(errorMessage);
       };
       reader.readAsDataURL(file);
     };
@@ -197,6 +451,7 @@ const App: React.FC = () => {
         message: '新しい画像をアップロードすると、現在の画像と生成履歴がすべてクリアされます。よろしいですか？',
         confirmText: 'はい、クリアして続行',
         confirmButtonColor: 'red',
+        nextAction: '現在の画像と生成履歴がすべて削除され、新しい画像でリノベーションを開始します。',
         onConfirm: () => {
           processUpload();
           setModalInfo(null);
@@ -226,19 +481,30 @@ const App: React.FC = () => {
       message: 'これまでに生成した画像がすべて消えますがよろしいですか？',
       confirmText: 'クリアする',
       confirmButtonColor: 'red',
+      nextAction: 'アップロードした画像、生成した全ての画像、見積もりデータがリセットされ、最初の状態に戻ります。',
       onConfirm: () => {
         console.log('Clearing all data...');
         resetState();
         setModalInfo(null);
+        toast.success('すべてクリアしました');
       },
       cancelText: 'キャンセル',
       onCancel: () => setModalInfo(null),
     });
   };
 
+  // Use ref to access latest tutorial state without adding to dependencies
+  const tutorialModeRef = React.useRef(tutorialMode);
+  const tutorialStepIndexRef = React.useRef(tutorialStepIndex);
+
+  React.useEffect(() => {
+    tutorialModeRef.current = tutorialMode;
+    tutorialStepIndexRef.current = tutorialStepIndex;
+  }, [tutorialMode, tutorialStepIndex]);
+
   const handleGenerate = useCallback(async (
-    mode: RenovationMode | 'sketch', 
-    promptOrStyle: string, 
+    mode: RenovationMode | 'sketch',
+    promptOrStyle: string,
     products?: RegisteredProduct[]
   ) => {
     const baseImage = (isFinetuningMode && activeGeneratedImage) ? activeGeneratedImage.src : originalImage;
@@ -249,15 +515,88 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
-    
+
     const base64Data = baseImage.split(',')[1];
     if (!base64Data) {
         setError('無効な画像データです。');
         setIsLoading(false);
         return;
     }
-    
+
     try {
+      // Tutorial mode: Use mock data instead of API
+      if (tutorialModeRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API delay
+
+        // Determine which sample image to use based on style or step
+        let sampleImageUrl;
+        let tutorialImageId = '';
+        if (tutorialStepIndexRef.current === 7) {
+          // Step 8: Furniture modification - use rug image
+          sampleImageUrl = TUTORIAL_SAMPLE_IMAGES.renovation.minimalistWithRug;
+          tutorialImageId = 'tutorial-minimalist-rug';
+        } else if (tutorialStepIndexRef.current === 8) {
+          // Step 9: Person modification - use rug + child image
+          sampleImageUrl = TUTORIAL_SAMPLE_IMAGES.renovation.minimalistWithRugAndChild;
+          tutorialImageId = 'tutorial-minimalist-rug-child';
+        } else if (tutorialStepIndexRef.current === 9) {
+          // Step 10: Partial modification - use playroom image
+          sampleImageUrl = TUTORIAL_SAMPLE_IMAGES.renovation.minimalistPlayroom;
+          tutorialImageId = 'tutorial-minimalist-playroom';
+        } else if (tutorialStepIndexRef.current === 10) {
+          // Step 11: Products modification - use sofa image
+          sampleImageUrl = TUTORIAL_SAMPLE_IMAGES.renovation.minimalistWithSofa;
+          tutorialImageId = 'tutorial-minimalist-sofa';
+        } else {
+          if (promptOrStyle === 'minimalist') {
+            sampleImageUrl = TUTORIAL_SAMPLE_IMAGES.renovation.minimalist;
+            tutorialImageId = 'tutorial-minimalist';
+          } else {
+            sampleImageUrl = TUTORIAL_SAMPLE_IMAGES.renovation.scandinavian;
+            tutorialImageId = 'tutorial-scandinavian';
+          }
+        }
+
+        const response = await fetch(sampleImageUrl);
+        const blob = await response.blob();
+        const reader = new FileReader();
+
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          const newImage: GeneratedImage = {
+            src: `data:image/png;base64,${base64}`,
+            aspectRatio: originalImageAspectRatio,
+            description: tutorialImageId,
+          };
+          setGeneratedImages(prevImages => [newImage, ...prevImages].slice(0, 20));
+          setActiveGeneratedImage(newImage);
+          toast.success('画像の生成が完了しました');
+          setIsLoading(false);
+
+          // Auto-advance to next step
+          if (tutorialStepIndexRef.current === 1) {
+            setTimeout(() => setTutorialStepIndex(2), 1000);
+          } else if (tutorialStepIndexRef.current === 3) {
+            setTimeout(() => setTutorialStepIndex(4), 1000);
+          } else if (tutorialStepIndexRef.current === 7) {
+            // Step 8: Mark furniture image as generated
+            setTutorialFurnitureImageGenerated(true);
+          } else if (tutorialStepIndexRef.current === 8) {
+            // Step 9: Mark person image as generated
+            setTutorialPersonImageGenerated(true);
+          } else if (tutorialStepIndexRef.current === 9) {
+            // Step 10: Mark products image as generated
+            setTutorialProductsImageGenerated(true);
+          } else if (tutorialStepIndexRef.current === 10) {
+            // Step 11: Mark step 11 image as generated
+            setTutorialStep11ImageGenerated(true);
+          }
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+
+      // Normal mode: Call actual API
       let result;
       let description;
 
@@ -276,14 +615,14 @@ const App: React.FC = () => {
         description = undefined;
       } else {
         const isOmakase = promptOrStyle === OMAKASE_PROMPT;
-        const prompt = mode === 'oneClick' 
+        const prompt = mode === 'oneClick'
           ? RENOVATION_PROMPTS[promptOrStyle as RenovationStyle] ?? promptOrStyle
           : promptOrStyle;
-        
+
         if (!prompt) {
           throw new Error('無効なリノベーションスタイルです。');
         }
-        
+
         result = await generateRenovationImage(base64Data, mimeType, prompt, originalImageAspectRatio, isOmakase);
         description = isOmakase ? result.text : undefined;
       }
@@ -296,27 +635,35 @@ const App: React.FC = () => {
         };
         setGeneratedImages(prevImages => [newImage, ...prevImages].slice(0, 20));
         setActiveGeneratedImage(newImage);
+        toast.success('画像の生成が完了しました');
       }
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : '画像の生成に失敗しました: 不明なエラーが発生しました。');
+      const errorMessage = err instanceof Error ? err.message : '画像の生成に失敗しました: 不明なエラーが発生しました。';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
     finally {
       setIsLoading(false);
     }
-  }, [originalImage, activeGeneratedImage, mimeType, isFinetuningMode, originalImageAspectRatio, appMode]);
+  }, [originalImage, activeGeneratedImage, mimeType, isFinetuningMode, originalImageAspectRatio, appMode, exteriorSubMode, setGeneratedImages, setActiveGeneratedImage]);
 
   const handleHistorySelect = (image: GeneratedImage | null) => {
     setActiveGeneratedImage(image);
-  
+
     if (!isFinetuningMode || !image) {
       setIsFinetuningMode(false);
     }
-  
+
     setIsQuotationMode(false);
     setQuotationResult(null);
     if (image) {
       setDisplayAspectRatio(image.aspectRatio.replace(':', '/'));
+
+      // Check if Step 11 and minimalist image is selected
+      if (tutorialMode && tutorialStepIndex === 10 && image.description === 'tutorial-minimalist') {
+        setTutorialStep11HistorySelected(true);
+      }
     } else if (originalImage) {
       const img = new Image();
       img.onload = () => {
@@ -329,11 +676,26 @@ const App: React.FC = () => {
   const handleDownload = () => {
     if (!activeGeneratedImage) return;
 
+    // Step 12: Show tutorial modal
+    if (tutorialMode && tutorialStepIndex === 11) {
+      setModalInfo({
+        title: 'ダウンロード',
+        message: '選択した画像がお使いのデバイス(タブレット、PCなど)に保存されます',
+        confirmText: 'OK',
+        hideCancelButton: true,
+        onConfirm: () => {
+          setModalInfo(null);
+          setTutorialStep12DownloadClicked(true);
+        },
+      });
+      return;
+    }
+
     const link = document.createElement('a');
     link.href = activeGeneratedImage.src;
 
     const extension = activeGeneratedImage.src.substring("data:image/".length, activeGeneratedImage.src.indexOf(";base64"));
-    
+
     const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
     const modePrefix = appMode === 'renovation' ? 'renovation' : 'sketch';
     link.download = `${modePrefix}_${timestamp}.${extension}`;
@@ -341,6 +703,8 @@ const App: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    toast.success('画像をダウンロードしました');
   };
   
   const handleEnterQuotationMode = () => {
@@ -379,7 +743,9 @@ const App: React.FC = () => {
 
   const handleGetQuote = async (floor: string, wall: string, casing: string) => {
       if (!originalImage || !activeGeneratedImage) {
-          setError("見積もりには、元の画像と生成された画像の両方が必要です。");
+          const errorMessage = "見積もりには、元の画像と生成された画像の両方が必要です。";
+          setError(errorMessage);
+          toast.error(errorMessage);
           return;
       }
       setIsQuoting(true);
@@ -396,10 +762,13 @@ const App: React.FC = () => {
 
           const result = await generateQuotation(originalBase64, generatedBase64, mimeType, floor, wall, casing);
           setQuotationResult(result);
+          toast.success('見積もりを生成しました');
 
       } catch (err) {
           console.error(err);
-          setError(err instanceof Error ? err.message : '見積もりの生成に失敗しました。');
+          const errorMessage = err instanceof Error ? err.message : '見積もりの生成に失敗しました。';
+          setError(errorMessage);
+          toast.error(errorMessage);
       } finally {
           setIsQuoting(false);
       }
@@ -407,7 +776,9 @@ const App: React.FC = () => {
 
   const handleGetExteriorQuote = async (wallArea: string, paintType: string) => {
       if (!originalImage || !activeGeneratedImage) {
-          setError("見積もりには、元の画像と生成された画像の両方が必要です。");
+          const errorMessage = "見積もりには、元の画像と生成された画像の両方が必要です。";
+          setError(errorMessage);
+          toast.error(errorMessage);
           return;
       }
       setIsQuoting(true);
@@ -424,10 +795,13 @@ const App: React.FC = () => {
 
           const result = await generateExteriorPaintingQuotation(originalBase64, generatedBase64, mimeType, wallArea, paintType);
           setQuotationResult(result);
+          toast.success('外壁塗装の見積もりを生成しました');
 
       } catch (err) {
           console.error(err);
-          setError(err instanceof Error ? err.message : '見積もりの生成に失敗しました。');
+          const errorMessage = err instanceof Error ? err.message : '見積もりの生成に失敗しました。';
+          setError(errorMessage);
+          toast.error(errorMessage);
       } finally {
           setIsQuoting(false);
       }
@@ -453,14 +827,8 @@ const App: React.FC = () => {
   const handleSaveAsFormalQuotation = async (quotationResult: QuotationResult, customerInfo: CustomerInfo, originalImageUrl?: string, renovatedImageUrl?: string) => {
     console.log('Saving as formal quotation:', { quotationResult, customerInfo });
 
-    // 保存中のモーダルを表示
-    setModalInfo({
-      title: '保存中...',
-      message: '見積もりデータを保存しています。しばらくお待ちください。',
-      confirmText: '',
-      onConfirm: () => {},
-      hideCancelButton: true,
-    });
+    // 保存中のトースト通知
+    const toastId = toast.loading('見積もりデータを保存しています...');
 
     try {
       const timestamp = Date.now();
@@ -528,6 +896,8 @@ const App: React.FC = () => {
       await addDoc(collection(db, 'quotations'), quotationData);
       console.log('Quotation saved to database');
 
+      toast.success('概算見積もりをデータベースに保存しました', { id: toastId });
+
       // 保存後に確認モーダルを表示
       setModalInfo({
         title: '保存完了',
@@ -550,6 +920,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error('Error saving quotation:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`保存に失敗しました: ${errorMessage}`, { id: toastId });
       setModalInfo({
         title: 'エラー',
         message: (
@@ -777,6 +1148,7 @@ const App: React.FC = () => {
       >
         <PaintBrushIcon className="w-5 h-5" />
         リノベーション
+        <HelpTooltip text={HELP_TEXTS.renovationMode} />
       </button>
       <button
         onClick={() => handleAppModeChange('exterior')}
@@ -785,6 +1157,7 @@ const App: React.FC = () => {
       >
         <PencilIcon className="w-5 h-5" />
         外観デザイン
+        <HelpTooltip text={HELP_TEXTS.exteriorMode} />
       </button>
     </div>
   );
@@ -845,6 +1218,24 @@ const App: React.FC = () => {
     return <QuotationTemplatePage onNavigateBack={() => setSelectedApp('quotation')} tenantId={tenantId} />;
   }
 
+  // Show user guide
+  if (selectedApp === 'user-guide') {
+    const tenantId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'default';
+    return <UserGuidePage onNavigateBack={() => setSelectedApp('menu')} onStartTutorial={handleStartTutorial} tenantId={tenantId} />;
+  }
+
+  // Show tutorial
+  if (selectedApp === 'tutorial') {
+    // If tutorial hasn't started yet, show tutorial intro page
+    if (!tutorialMode) {
+      return <TutorialPage
+        onNavigateBack={() => setSelectedApp('menu')}
+        onStartTutorial={handleStartTutorial}
+      />;
+    }
+    // If tutorialMode is true, continue to show main UI below with tutorial overlay
+  }
+
   if (appView === 'database') {
     return <DatabasePage
             onNavigateBack={() => setAppView('main')}
@@ -857,8 +1248,49 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 flex flex-col">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#374151',
+            fontSize: '14px',
+            padding: '16px',
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+            style: {
+              border: '1px solid #d1fae5',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+            style: {
+              border: '1px solid #fee2e2',
+            },
+            duration: 5000,
+          },
+        }}
+      />
       <Header onNavigate={(view) => {
         if (view === 'menu') {
+          // Reset tutorial state when returning to menu
+          if (tutorialMode) {
+            setTutorialMode(false);
+            setTutorialStepIndex(0);
+            setTutorialSliderUsed(false);
+            setTutorialHistoryViewed(new Set());
+            resetState();
+          }
           setSelectedApp('menu');
         } else {
           setAppView(view);
@@ -872,13 +1304,15 @@ const App: React.FC = () => {
 
           {/* Mobile: Image display area */}
           <div className={`rounded-xl shadow-lg min-h-[400px] flex items-center justify-center p-4 mb-8 transition-colors duration-300 ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
-            {isLoading && <Loader messages={
-              appMode === 'renovation'
-                ? renovationLoadingMessages
-                : (exteriorSubMode === 'exterior_painting'
-                    ? exteriorPaintingLoadingMessages
-                    : sketchLoadingMessages)
-            } />}
+            {isLoading && <Loader
+              messages={
+                appMode === 'renovation'
+                  ? renovationLoadingMessages
+                  : (exteriorSubMode === 'exterior_painting'
+                      ? exteriorPaintingLoadingMessages
+                      : sketchLoadingMessages)
+              }
+            />}
             {!isLoading && error && !isQuotationMode && (
               <ErrorDisplay error={error} />
             )}
@@ -896,8 +1330,16 @@ const App: React.FC = () => {
             {!isLoading && !isFinetuningMode && originalImage && activeGeneratedImage && !isQuotationMode && (
               <div className="w-full">
                 {appMode === 'renovation' ? (
-                  <div className="w-full max-w-4xl mx-auto" style={{ aspectRatio: displayAspectRatio }}>
-                    <ComparisonView before={originalImage} after={activeGeneratedImage.src} />
+                  <div className={`w-full max-w-4xl mx-auto ${tutorialMode && (tutorialStepIndex === 2 || tutorialStepIndex === 4) ? 'relative z-50' : ''}`} style={{ aspectRatio: displayAspectRatio }}>
+                    <ComparisonView
+                      before={originalImage}
+                      after={activeGeneratedImage.src}
+                      {...(tutorialMode && {
+                        tutorialMode: true,
+                        tutorialStepIndex: tutorialStepIndex,
+                        onSliderUsed: () => setTutorialSliderUsed(true),
+                      })}
+                    />
                   </div>
                 ) : (
                   <div className="w-full max-w-6xl mx-auto">
@@ -958,23 +1400,42 @@ const App: React.FC = () => {
 
           {/* Mobile: Action buttons */}
           {!isLoading && activeGeneratedImage && (
-             <div className="text-center mb-6 flex justify-center items-center gap-4 flex-wrap">
+             <div className={`text-center mb-6 flex justify-center items-center gap-4 flex-wrap ${tutorialMode && (tutorialStepIndex === 5 || tutorialStepIndex === 11) ? 'pointer-events-none' : ''}`}>
               {!isFinetuningMode && !isQuotationMode && (
                 <>
                   <button
-                    onClick={() => setIsFinetuningMode(true)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    onClick={() => {
+                      setIsFinetuningMode(true);
+                      if (tutorialMode && tutorialStepIndex === 10 && tutorialStep11HistorySelected) {
+                        setTutorialStep11FinetuneStarted(true);
+                      }
+                    }}
+                    disabled={tutorialMode && tutorialStepIndex === 11}
+                    className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] text-white font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 touch-manipulation ${
+                      tutorialMode && tutorialStepIndex === 11
+                        ? 'opacity-50 cursor-not-allowed bg-indigo-600'
+                        : tutorialMode && (tutorialStepIndex === 6 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected))
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 ring-4 ring-purple-300 ring-opacity-50 animate-pulse relative z-50'
+                        : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800'
+                    }`}
                   >
                     <SparklesIcon className="w-5 h-5" />
                     この画像を微調整する
+                    <HelpTooltip text={HELP_TEXTS.finetuningMode} />
                   </button>
                   {(appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                     <button
                       onClick={handleEnterQuotationMode}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                      disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
+                      className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 touch-manipulation ${
+                        tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
+                          ? 'opacity-50 cursor-not-allowed bg-emerald-600 text-white'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
+                      }`}
                     >
                       <CalculatorIcon className="w-5 h-5" />
                       この画像で見積もりに移る
+                      <HelpTooltip text={HELP_TEXTS.quotationMode} />
                     </button>
                   )}
                 </>
@@ -982,7 +1443,12 @@ const App: React.FC = () => {
               {isFinetuningMode && !isQuotationMode && (appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                 <button
                   onClick={handleEnterQuotationMode}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                  disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
+                  className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 touch-manipulation ${
+                    tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
+                      ? 'opacity-50 cursor-not-allowed bg-emerald-600 text-white'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
+                  }`}
                 >
                   <CalculatorIcon className="w-5 h-5" />
                   この画像で見積もりに移る
@@ -990,11 +1456,30 @@ const App: React.FC = () => {
               )}
                <button
                 onClick={handleDownload}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-bold rounded-lg border border-gray-300 hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                disabled={tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked}
+                className={`inline-flex items-center gap-2 px-6 py-3 font-bold rounded-lg border transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+                  tutorialMode && tutorialStepIndex === 11
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-purple-500 hover:from-purple-600 hover:to-indigo-700 ring-4 ring-purple-300 ring-opacity-50 animate-pulse pointer-events-auto relative z-50'
+                    : tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked
+                    ? 'opacity-50 cursor-not-allowed bg-white text-gray-700 border-gray-300'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
               >
                 <ArrowDownTrayIcon className="w-5 h-5" />
                 ダウンロード
               </button>
+            </div>
+          )}
+
+          {/* Step 12 Guide Arrow for Mobile */}
+          {tutorialMode && tutorialStepIndex === 11 && !isLoading && activeGeneratedImage && (
+            <div className="relative mb-4">
+              <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
+                <div className="text-purple-600 font-bold text-base mb-1">↓ ダウンロード ↓</div>
+                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </div>
             </div>
           )}
 
@@ -1006,6 +1491,11 @@ const App: React.FC = () => {
               activeImage={activeGeneratedImage?.src ?? null}
               onSelect={handleHistorySelect}
               originalImageLabel={appMode === 'exterior' && exteriorSubMode === 'sketch2arch' ? 'スケッチ' : 'オリジナル'}
+              {...(tutorialMode && {
+                tutorialMode: true,
+                tutorialStepIndex: tutorialStepIndex,
+                onTutorialHistoryClick: handleTutorialHistoryClick,
+              })}
             />
           )}
 
@@ -1030,7 +1520,7 @@ const App: React.FC = () => {
               <>
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-bold text-gray-700">1. 画像をアップロード</h2>
-                  {originalImage && (
+                  {originalImage && !tutorialMode && (
                     <button
                       onClick={handleClearAll}
                       className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 transition-colors font-semibold"
@@ -1041,7 +1531,16 @@ const App: React.FC = () => {
                     </button>
                   )}
                 </div>
-                <ImageUploader onImageUpload={handleImageUpload} image={originalImage} onError={handleUploadError} />
+                <ImageUploader
+                  onImageUpload={handleImageUpload}
+                  image={originalImage}
+                  onError={handleUploadError}
+                  {...(tutorialMode && {
+                    tutorialMode: true,
+                    tutorialStepIndex: tutorialStepIndex,
+                    onUseSampleImage: handleUseSampleImage,
+                  })}
+                />
                 {originalImage && (
                   <>
                     <h2 className="text-xl font-bold text-gray-700 pt-4">2. モードを選択</h2>
@@ -1050,13 +1549,17 @@ const App: React.FC = () => {
                       exteriorSubMode={exteriorSubMode}
                       onExteriorSubModeChange={setExteriorSubMode}
                       onGenerate={handleGenerate}
-                      isDisabled={isLoading}
+                      isDisabled={isLoading || (tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked)}
                       activeImage={isFinetuningMode && activeGeneratedImage ? activeGeneratedImage.src : originalImage}
                       mimeType={mimeType}
                       isFinetuningMode={isFinetuningMode}
                       onExitFinetuning={() => setIsFinetuningMode(false)}
                       categories={categories}
                       products={products}
+                      {...(tutorialMode && {
+                        tutorialMode: true,
+                        tutorialStepIndex: tutorialStepIndex,
+                      })}
                     />
                   </>
                 )}
@@ -1120,7 +1623,16 @@ const App: React.FC = () => {
 
         {/* Desktop: Original layout */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-8" style={{ height: 'calc(100vh - 10rem)' }}>
-          <div className="lg:col-span-4 xl:col-span-3 overflow-y-auto">
+          <div className={`lg:col-span-4 xl:col-span-3 overflow-y-auto relative ${tutorialMode && (tutorialStepIndex === 0 || tutorialStepIndex === 1 || (tutorialStepIndex >= 7 && tutorialStepIndex <= 10)) ? 'z-50' : ''} ${tutorialMode && ((tutorialStepIndex === 8 && tutorialPersonImageGenerated) || (tutorialStepIndex === 9 && tutorialProductsImageGenerated)) ? 'pointer-events-none opacity-50' : ''}`}>
+            {/* Step 4 Guide Arrow */}
+            {tutorialMode && tutorialStepIndex === 3 && (
+              <div className="absolute top-[280px] left-1/2 -translate-x-1/2 z-50 flex flex-col items-center animate-bounce">
+                <div className="text-purple-600 font-bold text-base mb-1">↓ デザインテイストへ ↓</div>
+                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
             <div className={`rounded-xl shadow-lg p-6 space-y-6 transition-colors duration-300 ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' : 'bg-white'}`}>
               {isQuotationMode ? (
                 <QuotationPanel
@@ -1141,7 +1653,7 @@ const App: React.FC = () => {
                 <>
                   <div className="flex justify-between items-center">
                     <h2 className="text-xl font-bold text-gray-700">1. 画像をアップロード</h2>
-                    {originalImage && (
+                    {originalImage && !tutorialMode && (
                       <button
                         onClick={handleClearAll}
                         className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 transition-colors font-semibold"
@@ -1152,7 +1664,16 @@ const App: React.FC = () => {
                       </button>
                     )}
                   </div>
-                  <ImageUploader onImageUpload={handleImageUpload} image={originalImage} onError={handleUploadError} />
+                  <ImageUploader
+                  onImageUpload={handleImageUpload}
+                  image={originalImage}
+                  onError={handleUploadError}
+                  {...(tutorialMode && {
+                    tutorialMode: true,
+                    tutorialStepIndex: tutorialStepIndex,
+                    onUseSampleImage: handleUseSampleImage,
+                  })}
+                />
                   {originalImage && (
                     <>
                       <h2 className="text-xl font-bold text-gray-700 pt-4">2. モードを選択</h2>
@@ -1161,13 +1682,33 @@ const App: React.FC = () => {
                         exteriorSubMode={exteriorSubMode}
                         onExteriorSubModeChange={setExteriorSubMode}
                         onGenerate={handleGenerate}
-                        isDisabled={isLoading}
+                        isDisabled={isLoading || (tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked)}
                         activeImage={isFinetuningMode && activeGeneratedImage ? activeGeneratedImage.src : originalImage}
                         mimeType={mimeType}
                         isFinetuningMode={isFinetuningMode}
                         onExitFinetuning={() => setIsFinetuningMode(false)}
                         categories={categories}
                         products={products}
+                        {...(tutorialMode && {
+                          tutorialMode: true,
+                          tutorialStepIndex: tutorialStepIndex,
+                          onTutorialFurnitureTabClick: handleTutorialFurnitureTabClick,
+                          tutorialFurnitureTabClicked: tutorialFurnitureTabClicked,
+                          onTutorialFurnitureInputChange: handleTutorialFurnitureInputChange,
+                          tutorialFurnitureInputValid: tutorialFurnitureInputValid,
+                          onTutorialPersonTabClick: handleTutorialPersonTabClick,
+                          tutorialPersonTabClicked: tutorialPersonTabClicked,
+                          onTutorialPersonInputChange: handleTutorialPersonInputChange,
+                          tutorialPersonInputValid: tutorialPersonInputValid,
+                          onTutorialProductsTabClick: handleTutorialProductsTabClick,
+                          tutorialProductsTabClicked: tutorialProductsTabClicked,
+                          onTutorialStep11TabClick: handleTutorialStep11TabClick,
+                          tutorialStep11TabClicked: tutorialStep11TabClicked,
+                          onTutorialStep11ProductSelect: handleTutorialStep11ProductSelect,
+                          tutorialStep11ProductSelected: tutorialStep11ProductSelected,
+                          onTutorialStep11InputChange: handleTutorialStep11InputChange,
+                          tutorialStep11InputValid: tutorialStep11InputValid,
+                        })}
                       />
                     </>
                   )}
@@ -1175,16 +1716,47 @@ const App: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="lg:col-span-8 xl:col-span-9 overflow-y-auto">
+          <div className={`lg:col-span-8 xl:col-span-9 overflow-y-auto relative ${tutorialMode && (tutorialStepIndex === 5 || tutorialStepIndex === 10 || tutorialStepIndex === 11) ? 'z-50' : ''}`}>
+            {/* Step 6: Internal overlay to block everything except HistoryPanel */}
+            {tutorialMode && tutorialStepIndex === 5 && (
+              <div className="absolute inset-0 z-40 pointer-events-auto" />
+            )}
+
+            {/* Step 6 Guide Arrow */}
+            {tutorialMode && tutorialStepIndex === 5 && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
+                <div className="text-purple-600 font-bold text-base mb-1">↓ 履歴から選択 ↓</div>
+                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+
+            {/* Step 11: Internal overlay to block everything except HistoryPanel */}
+            {tutorialMode && tutorialStepIndex === 10 && !tutorialStep11HistorySelected && (
+              <div className="absolute inset-0 z-40 pointer-events-auto" />
+            )}
+
+            {/* Step 11 Guide Arrow */}
+            {tutorialMode && tutorialStepIndex === 10 && !tutorialStep11HistorySelected && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
+                <div className="text-purple-600 font-bold text-base mb-1">↓ ミニマリスト画像を選択 ↓</div>
+                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
            {originalImage && <ModeSelector />}
             <div className={`rounded-xl shadow-lg flex items-center justify-center p-4 transition-colors duration-300 ${!originalImage ? 'bg-white' : isFinetuningMode ? 'bg-indigo-50' : isQuotationMode ? 'bg-emerald-50' : appMode === 'exterior' && exteriorSubMode === 'exterior_painting' ? 'bg-green-50' : appMode === 'exterior' ? 'bg-blue-50' :'bg-white'}`}>
-            {isLoading && <Loader messages={
-              appMode === 'renovation'
-                ? renovationLoadingMessages
-                : (exteriorSubMode === 'exterior_painting'
-                    ? exteriorPaintingLoadingMessages
-                    : sketchLoadingMessages)
-            } />}
+            {isLoading && <Loader
+              messages={
+                appMode === 'renovation'
+                  ? renovationLoadingMessages
+                  : (exteriorSubMode === 'exterior_painting'
+                      ? exteriorPaintingLoadingMessages
+                      : sketchLoadingMessages)
+              }
+            />}
             {!isLoading && error && !isQuotationMode && (
               <ErrorDisplay error={error} />
             )}
@@ -1272,8 +1844,16 @@ const App: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="w-full max-w-4xl mx-auto" style={{ aspectRatio: displayAspectRatio }}>
-                        <ComparisonView before={originalImage} after={activeGeneratedImage.src} />
+                      <div className={`w-full max-w-4xl mx-auto ${tutorialMode && (tutorialStepIndex === 2 || tutorialStepIndex === 4) ? 'relative z-50' : ''}`} style={{ aspectRatio: displayAspectRatio }}>
+                        <ComparisonView
+                          before={originalImage}
+                          after={activeGeneratedImage.src}
+                          {...(tutorialMode && {
+                            tutorialMode: true,
+                            tutorialStepIndex: tutorialStepIndex,
+                            onSliderUsed: () => setTutorialSliderUsed(true),
+                          })}
+                        />
                       </div>
                     )}
                     {activeGeneratedImage.description && !isQuotationMode && (
@@ -1318,23 +1898,42 @@ const App: React.FC = () => {
 
           {/* Desktop: Action buttons */}
           {!isLoading && activeGeneratedImage && (
-             <div className="text-center mt-6 flex justify-center items-center gap-4 flex-wrap">
+             <div className={`text-center mt-6 flex justify-center items-center gap-4 flex-wrap ${tutorialMode && (tutorialStepIndex === 5 || tutorialStepIndex === 11) ? 'pointer-events-none' : ''}`}>
               {!isFinetuningMode && !isQuotationMode && (
                 <>
                   <button
-                    onClick={() => setIsFinetuningMode(true)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    onClick={() => {
+                      setIsFinetuningMode(true);
+                      if (tutorialMode && tutorialStepIndex === 10 && tutorialStep11HistorySelected) {
+                        setTutorialStep11FinetuneStarted(true);
+                      }
+                    }}
+                    disabled={tutorialMode && tutorialStepIndex === 11}
+                    className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] text-white font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 touch-manipulation ${
+                      tutorialMode && tutorialStepIndex === 11
+                        ? 'opacity-50 cursor-not-allowed bg-indigo-600'
+                        : tutorialMode && (tutorialStepIndex === 6 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected))
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 ring-4 ring-purple-300 ring-opacity-50 animate-pulse relative z-50'
+                        : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800'
+                    }`}
                   >
                     <SparklesIcon className="w-5 h-5" />
                     この画像を微調整する
+                    <HelpTooltip text={HELP_TEXTS.finetuningMode} />
                   </button>
                   {(appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                     <button
                       onClick={handleEnterQuotationMode}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                      disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
+                      className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 touch-manipulation ${
+                        tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
+                          ? 'opacity-50 cursor-not-allowed bg-emerald-600 text-white'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
+                      }`}
                     >
                       <CalculatorIcon className="w-5 h-5" />
                       この画像で見積もりに移る
+                      <HelpTooltip text={HELP_TEXTS.quotationMode} />
                     </button>
                   )}
                 </>
@@ -1342,7 +1941,12 @@ const App: React.FC = () => {
               {isFinetuningMode && !isQuotationMode && (appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                 <button
                   onClick={handleEnterQuotationMode}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                  disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
+                  className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 touch-manipulation ${
+                    tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
+                      ? 'opacity-50 cursor-not-allowed bg-emerald-600 text-white'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
+                  }`}
                 >
                   <CalculatorIcon className="w-5 h-5" />
                   この画像で見積もりに移る
@@ -1350,11 +1954,30 @@ const App: React.FC = () => {
               )}
                <button
                 onClick={handleDownload}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-bold rounded-lg border border-gray-300 hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                disabled={tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked}
+                className={`inline-flex items-center gap-2 px-6 py-3 font-bold rounded-lg border transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+                  tutorialMode && tutorialStepIndex === 11
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-purple-500 hover:from-purple-600 hover:to-indigo-700 ring-4 ring-purple-300 ring-opacity-50 animate-pulse pointer-events-auto relative z-50'
+                    : tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked
+                    ? 'opacity-50 cursor-not-allowed bg-white text-gray-700 border-gray-300'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
               >
                 <ArrowDownTrayIcon className="w-5 h-5" />
                 ダウンロード
               </button>
+            </div>
+          )}
+
+          {/* Step 12 Guide Arrow for Desktop */}
+          {tutorialMode && tutorialStepIndex === 11 && !isLoading && activeGeneratedImage && (
+            <div className="relative mb-4">
+              <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
+                <div className="text-purple-600 font-bold text-base mb-1">↓ ダウンロード ↓</div>
+                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </div>
             </div>
           )}
 
@@ -1366,6 +1989,11 @@ const App: React.FC = () => {
               activeImage={activeGeneratedImage?.src ?? null}
               onSelect={handleHistorySelect}
               originalImageLabel={appMode === 'exterior' && exteriorSubMode === 'sketch2arch' ? 'スケッチ' : 'オリジナル'}
+              {...(tutorialMode && {
+                tutorialMode: true,
+                tutorialStepIndex: tutorialStepIndex,
+                onTutorialHistoryClick: handleTutorialHistoryClick,
+              })}
             />
           )}
           </div>
@@ -1382,7 +2010,40 @@ const App: React.FC = () => {
           onCancel={modalInfo.onCancel}
           confirmButtonColor={modalInfo.confirmButtonColor}
           hideCancelButton={modalInfo.hideCancelButton}
+          nextAction={modalInfo.nextAction}
         />
+      )}
+      {tutorialMode && (
+        <>
+          {/* Overlay to block interactions outside tutorial targets */}
+          <div className="fixed inset-0 bg-black bg-opacity-30 z-40 pointer-events-auto" />
+
+          <TutorialStep
+            step={TUTORIAL_RENOVATION_STEPS[tutorialStepIndex]}
+            currentStep={tutorialStepIndex + 1}
+            totalSteps={TUTORIAL_RENOVATION_STEPS.length}
+            onNext={handleTutorialNext}
+            onPrev={handleTutorialPrev}
+            onSkip={handleSkipTutorial}
+            onExit={handleExitTutorial}
+            isFirstStep={tutorialStepIndex === 0}
+            isLastStep={tutorialStepIndex === TUTORIAL_RENOVATION_STEPS.length - 1}
+            nextButtonDisabled={
+              (tutorialStepIndex === 0 && !originalImage) ||
+              (tutorialStepIndex === 1) ||
+              (tutorialStepIndex === 2 && !tutorialSliderUsed) ||
+              (tutorialStepIndex === 3) ||
+              (tutorialStepIndex === 4 && !tutorialSliderUsed) ||
+              (tutorialStepIndex === 5 && !tutorialMinimalistSelected) ||
+              (tutorialStepIndex === 6 && !isFinetuningMode) ||
+              (tutorialStepIndex === 7 && !tutorialFurnitureImageGenerated) ||
+              (tutorialStepIndex === 8 && !tutorialPersonImageGenerated) ||
+              (tutorialStepIndex === 9 && !tutorialProductsImageGenerated) ||
+              (tutorialStepIndex === 10 && !tutorialStep11ImageGenerated) ||
+              (tutorialStepIndex === 11 && !tutorialStep12DownloadClicked)
+            }
+          />
+        </>
       )}
     </div>
   );
