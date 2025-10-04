@@ -2352,13 +2352,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
       if (canGenerate) {
         const prompt = buildPrompt(additionalInstructions);
 
-        // Update generation count and add to prompt history
-        onCommercialContextChange({
-          ...commercialContext,
-          generationCount: commercialContext.generationCount + 1,
-          promptHistory: [...commercialContext.promptHistory, prompt],
-        });
-
+        // Note: generation count will be incremented in App.tsx after successful generation
         onGenerate('oneClick', prompt);
       }
     };

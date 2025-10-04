@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import type { QuotationResult, RegisteredProduct } from '../types';
+import type { QuotationResult, RegisteredProduct, CommercialRenovationContext, FacilityType, OriginalSpaceType } from '../types';
 
 
 if (!import.meta.env.VITE_GEMINI_API_KEY) {
@@ -811,3 +811,182 @@ JSONフォーマットで返してください：
     throw error;
   }
 }
+
+/**
+ * Generate commercial facility renovation image with cumulative prompt building
+ * Supports multi-phase workflow: facility_definition → zoning → detail_design → finishing
+ */
+export const generateCommercialRenovationImage = async (
+  base64ImageData: string,
+  mimeType: string,
+  context: CommercialRenovationContext,
+  aspectRatio: string
+): Promise<RenovationResult> => {
+  try {
+    // Helper function to get facility type name
+    const getFacilityTypeName = (type: FacilityType | null): string => {
+      const facilityNames: Record<FacilityType, string> = {
+        office: 'オフィス空間',
+        hotel: 'ホテル・宿泊施設',
+        retail: '小売店舗',
+        medical: '医療・クリニック',
+        education: '教育施設',
+        fitness: 'フィットネス・ジム',
+        salon: 'サロン・スパ',
+        coworking: 'コワーキングスペース'
+      };
+      return type ? facilityNames[type] : '未指定';
+    };
+
+    // Helper function to get original space type name
+    const getOriginalSpaceTypeName = (type: OriginalSpaceType | null): string => {
+      const spaceNames: Record<OriginalSpaceType, string> = {
+        warehouse: '倉庫',
+        existing_office: '既存オフィス',
+        former_store: '元店舗',
+        residence: '住宅',
+        skeleton: 'スケルトン'
+      };
+      return type ? spaceNames[type] : '未指定';
+    };
+
+    // Build cumulative prompt based on current phase
+    let promptParts: string[] = [];
+
+    // Phase 1: Facility Definition (always included if set)
+    if (context.facilityType && context.originalSpaceType) {
+      const facilityName = getFacilityTypeName(context.facilityType);
+      const originalSpaceName = getOriginalSpaceTypeName(context.originalSpaceType);
+
+      promptParts.push(`【施設コンセプト】`);
+      promptParts.push(`目的施設: ${facilityName}`);
+      promptParts.push(`元の空間: ${originalSpaceName}`);
+
+      if (context.conceptKeywords.length > 0) {
+        promptParts.push(`コンセプトキーワード: ${context.conceptKeywords.join('、')}`);
+      }
+
+      if (context.targetScale) {
+        promptParts.push(`規模: ${context.targetScale}`);
+      }
+    }
+
+    // Phase 2: Zoning (if in zoning phase or later)
+    if (context.currentStep !== 'facility_definition' && context.zoningData.areas.length > 0) {
+      promptParts.push(`\n【ゾーニング】`);
+      promptParts.push(`配置エリア: ${context.zoningData.areas.join('、')}`);
+
+      if (context.zoningData.flowPattern) {
+        promptParts.push(`動線パターン: ${context.zoningData.flowPattern}`);
+      }
+    }
+
+    // Phase 3: Detail Design (if in detail_design phase or later)
+    if ((context.currentStep === 'detail_design' || context.currentStep === 'finishing')) {
+      if (context.designDetails.colorScheme.length > 0) {
+        promptParts.push(`\n【詳細デザイン】`);
+        promptParts.push(`カラースキーム: ${context.designDetails.colorScheme.join('、')}`);
+      }
+
+      if (context.designDetails.materials.length > 0) {
+        promptParts.push(`使用素材: ${context.designDetails.materials.join('、')}`);
+      }
+    }
+
+    // Build phase-specific instruction
+    let phaseInstruction = '';
+    switch (context.currentStep) {
+      case 'facility_definition':
+        phaseInstruction = `\n\n【今回の指示】\nこれは第${context.generationCount + 1}回目の生成です。提供された画像を${getFacilityTypeName(context.facilityType)}への用途変更を前提として、${getOriginalSpaceTypeName(context.originalSpaceType)}からのリノベーション基本構想を視覚化してください。コンセプトに基づいた空間の雰囲気や基本的なレイアウトのイメージを作成してください。`;
+        break;
+
+      case 'zoning':
+        phaseInstruction = `\n\n【今回の指示】\nこれは第${context.generationCount + 1}回目の生成です。前回までの基本構想を踏まえ、指定されたエリア配置と動線パターンに基づいて、具体的なゾーニング計画を視覚化してください。各エリアの位置関係や動線の流れが明確になるようにしてください。`;
+        break;
+
+      case 'detail_design':
+        phaseInstruction = `\n\n【今回の指示】\nこれは第${context.generationCount + 1}回目の生成です。前回までのゾーニング計画を踏まえ、指定されたカラースキームと素材を用いて、詳細なインテリアデザインを作成してください。仕上げ材や家具、照明などの具体的なディテールを表現してください。`;
+        break;
+
+      case 'finishing':
+        phaseInstruction = `\n\n【今回の指示】\nこれは第${context.generationCount + 1}回目の生成です。前回までのデザインをさらにブラッシュアップし、最終的な完成イメージを作成してください。細部の仕上がりやアクセサリー、装飾などを加えて、実際に使用されている様子を表現してください。`;
+        break;
+    }
+
+    promptParts.push(phaseInstruction);
+
+    // Add prompt history context (for reference to previous generations)
+    if (context.promptHistory.length > 0) {
+      promptParts.push(`\n【重要】前回までの生成で使用された指示を参考にし、一貫性のあるデザインを維持してください。`);
+    }
+
+    const cumulativePrompt = promptParts.join('\n');
+
+    const finalPrompt = `提供された画像の構図、画角、アスペクト比（約 ${aspectRatio}）を完全に維持したまま、商業施設へのリノベーションイメージを以下の指示に従って編集してください。画像の一部だけを切り取ったり、部分的に変更したりすることは絶対に避けてください。編集後の画像のみを返してください。テキストによる返答は一切不要です。
+
+${cumulativePrompt}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image-preview',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data: base64ImageData,
+              mimeType: mimeType,
+            },
+          },
+          {
+            text: finalPrompt,
+          },
+        ],
+      },
+      config: {
+        responseModalities: [Modality.IMAGE],
+      },
+    });
+
+    if (!response.candidates || response.candidates.length === 0) {
+      const blockReason = response.promptFeedback?.blockReason;
+      if (blockReason) {
+        throw new Error(`リクエストが安全上の理由でブロックされました (${blockReason})。プロンプトや画像を変更して再度お試しください。`);
+      }
+      throw new Error("APIから有効な応答がありませんでした。");
+    }
+
+    const candidate = response.candidates[0];
+
+    if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+        throw new Error(`画像の生成が完了しませんでした。理由: ${candidate.finishReason}`);
+    }
+
+    const result: RenovationResult = { image: null, text: null, mimeType: null };
+
+    if (candidate.content && candidate.content.parts) {
+        for (const part of candidate.content.parts) {
+            if (part.inlineData) {
+              result.image = part.inlineData.data;
+              result.mimeType = part.inlineData.mimeType;
+            } else if (part.text) {
+              result.text = part.text;
+            }
+        }
+    }
+
+    if (!result.image) {
+        const refusalText = result.text
+            ? `AIの応答: 「${result.text}」`
+            : "応答に画像データが含まれていませんでした。";
+        throw new Error(`画像が生成されませんでした。${refusalText} プロンプトをより具体的に変更すると解決する場合があります。`);
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error("Error calling Gemini API for commercial renovation:", error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`商業施設リノベーション画像の生成中に予期せぬエラーが発生しました: ${String(error)}`);
+  }
+};

@@ -23,7 +23,7 @@ import UserGuidePage from './components/UserGuidePage';
 import TutorialPage from './components/TutorialPage';
 import TutorialStep from './components/TutorialStep';
 import type { CustomerInfo } from './components/CustomerInfoModal';
-import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts, generateExteriorPaintingQuotation } from './services/geminiService';
+import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts, generateExteriorPaintingQuotation, generateCommercialRenovationImage } from './services/geminiService';
 import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory, ExteriorSubMode, RenovationSubMode, FacilityType, OriginalSpaceType, CommercialStep, CommercialRenovationContext } from './types';
 import { RENOVATION_PROMPTS, OMAKASE_PROMPT, UPDATE_HISTORY, HELP_TEXTS, TUTORIAL_RENOVATION_STEPS, TUTORIAL_SAMPLE_IMAGES } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
@@ -637,6 +637,10 @@ const App: React.FC = () => {
         // Exterior painting mode - will be implemented in next step
         result = await generateRenovationImage(base64Data, mimeType, promptOrStyle, originalImageAspectRatio, false);
         description = undefined;
+      } else if (appMode === 'renovation' && renovationSubMode === 'commercial' && featureFlags.enableCommercialMode) {
+        // Commercial facility renovation mode (development only)
+        result = await generateCommercialRenovationImage(base64Data, mimeType, commercialContext, originalImageAspectRatio);
+        description = `商業施設リノベーション - ${commercialContext.currentStep} (第${commercialContext.generationCount}回)`;
       } else {
         const isOmakase = promptOrStyle === OMAKASE_PROMPT;
         const prompt = mode === 'oneClick'
@@ -660,6 +664,31 @@ const App: React.FC = () => {
         setGeneratedImages(prevImages => [newImage, ...prevImages].slice(0, 20));
         setActiveGeneratedImage(newImage);
         toast.success('画像の生成が完了しました');
+
+        // Update commercial context after successful generation
+        if (appMode === 'renovation' && renovationSubMode === 'commercial' && featureFlags.enableCommercialMode) {
+          const newGenerationCount = commercialContext.generationCount + 1;
+
+          // Determine next phase based on generation count
+          let newStep: CommercialStep = commercialContext.currentStep;
+          if (newGenerationCount <= 2) {
+            newStep = 'facility_definition';
+          } else if (newGenerationCount <= 5) {
+            newStep = 'zoning';
+          } else if (newGenerationCount <= 8) {
+            newStep = 'detail_design';
+          } else {
+            newStep = 'finishing';
+          }
+
+          setCommercialContext({
+            ...commercialContext,
+            generationCount: newGenerationCount,
+            currentStep: newStep,
+            promptHistory: [...commercialContext.promptHistory, promptOrStyle],
+            lastGeneratedImageUrl: newImage.src,
+          });
+        }
       }
     } catch (err) {
       console.error(err);
@@ -670,7 +699,7 @@ const App: React.FC = () => {
     finally {
       setIsLoading(false);
     }
-  }, [originalImage, activeGeneratedImage, mimeType, isFinetuningMode, originalImageAspectRatio, appMode, exteriorSubMode, setGeneratedImages, setActiveGeneratedImage]);
+  }, [originalImage, activeGeneratedImage, mimeType, isFinetuningMode, originalImageAspectRatio, appMode, exteriorSubMode, renovationSubMode, commercialContext, setCommercialContext, setGeneratedImages, setActiveGeneratedImage]);
 
   const handleHistorySelect = (image: GeneratedImage | null) => {
     setActiveGeneratedImage(image);
