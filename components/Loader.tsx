@@ -9,11 +9,11 @@ const Loader: React.FC<LoaderProps> = ({ messages }) => {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const messageInterval = setInterval(() => {
       setCurrentMessageIndex((prevIndex) => (prevIndex + 1) % messages.length);
     }, 2500);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(messageInterval);
   }, [messages.length]);
 
   return (

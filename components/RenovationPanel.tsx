@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // FIX: Import AppMode type.
 import type { RenovationMode, FurnitureStyleId, RoomTypeId, RegisteredProduct, ProductCategory, ArchOption, AppMode, SketchCategory, SketchFinetuneTabId, SketchFinetuneOption, ExteriorSubMode, ColorMode } from '../types';
-import { RENOVATION_CATEGORIES, OMAKASE_PROMPT, OMAKASE_SKETCH_PROMPT, FURNITURE_STYLES, ROOM_TYPES, SKETCH_CATEGORIES, SKETCH_FINETUNE_TABS, EXTERIOR_COLORS, EXTERIOR_MATERIALS, SPLIT_RATIOS } from '../constants';
+import { RENOVATION_CATEGORIES, OMAKASE_PROMPT, OMAKASE_SKETCH_PROMPT, FURNITURE_STYLES, ROOM_TYPES, SKETCH_CATEGORIES, SKETCH_FINETUNE_TABS, EXTERIOR_COLORS, EXTERIOR_MATERIALS, SPLIT_RATIOS, TUTORIAL_PRODUCTS } from '../constants';
 import { MagicWandIcon, EditIcon, SparklesIcon, LightBulbIcon, SpinnerIcon, ArrowUturnLeftIcon, SofaIcon, UserGroupIcon, BuildingStorefrontIcon, HomeModernIcon, CubeIcon, SwatchIcon, DocumentTextIcon, PencilIcon, PaintBrushIcon, TrashIcon } from './Icon';
 import { generateSuggestions } from '../services/geminiService';
 import FeatureTip from './FeatureTip';
@@ -19,6 +19,24 @@ interface RenovationPanelProps {
   onExitFinetuning: () => void;
   categories: ProductCategory[];
   products: RegisteredProduct[];
+  tutorialMode?: boolean;
+  tutorialStepIndex?: number;
+  onTutorialFurnitureTabClick?: () => void;
+  tutorialFurnitureTabClicked?: boolean;
+  onTutorialFurnitureInputChange?: (text: string) => void;
+  tutorialFurnitureInputValid?: boolean;
+  onTutorialPersonTabClick?: () => void;
+  tutorialPersonTabClicked?: boolean;
+  onTutorialPersonInputChange?: (text: string) => void;
+  tutorialPersonInputValid?: boolean;
+  onTutorialProductsTabClick?: () => void;
+  tutorialProductsTabClicked?: boolean;
+  onTutorialStep11TabClick?: () => void;
+  tutorialStep11TabClicked?: boolean;
+  onTutorialStep11ProductSelect?: (productId: string) => void;
+  tutorialStep11ProductSelected?: boolean;
+  onTutorialStep11InputChange?: (text: string) => void;
+  tutorialStep11InputValid?: boolean;
 }
 
 const TABS: { id: RenovationMode; name: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
@@ -40,10 +58,41 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   isFinetuningMode,
   onExitFinetuning,
   categories,
-  products
+  products,
+  tutorialMode,
+  tutorialStepIndex,
+  onTutorialFurnitureTabClick,
+  tutorialFurnitureTabClicked,
+  onTutorialFurnitureInputChange,
+  tutorialFurnitureInputValid,
+  onTutorialPersonTabClick,
+  tutorialPersonTabClicked,
+  onTutorialPersonInputChange,
+  tutorialPersonInputValid,
+  onTutorialProductsTabClick,
+  tutorialProductsTabClicked,
+  onTutorialStep11TabClick,
+  tutorialStep11TabClicked,
+  onTutorialStep11ProductSelect,
+  tutorialStep11ProductSelected,
+  onTutorialStep11InputChange,
+  tutorialStep11InputValid,
 }) => {
+  const isStep1 = tutorialMode === true && tutorialStepIndex === 1;
+  const isStep2 = tutorialMode === true && tutorialStepIndex === 2;
+  const isStep3 = tutorialMode === true && tutorialStepIndex === 3;
+  const isStep4 = tutorialMode === true && tutorialStepIndex === 4;
+  const isStep8 = tutorialMode === true && tutorialStepIndex === 7;
+  const isStep9 = tutorialMode === true && tutorialStepIndex === 8;
+  const isStep10 = tutorialMode === true && tutorialStepIndex === 9;
+  const isStep11 = tutorialMode === true && tutorialStepIndex === 10;
   // Filter categories based on mode
   const filteredCategories = React.useMemo(() => {
+    // In tutorial Step 11, use tutorial categories
+    if (isStep11) {
+      return TUTORIAL_PRODUCTS.categories;
+    }
+
     if (appMode === 'renovation') {
       // Show only 壁紙 and 家具 in renovation mode
       return categories.filter(c => ['壁紙', '家具'].includes(c.name));
@@ -52,7 +101,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
       return categories.filter(c => c.name === '塗料');
     }
     return categories;
-  }, [appMode, exteriorSubMode, categories]);
+  }, [appMode, exteriorSubMode, categories, isStep11]);
 
   const [activeTab, setActiveTab] = useState<RenovationMode>('oneClick');
   const [finetuneActiveTab, setFinetuneActiveTab] = useState<'partial' | 'furniture' | 'person' | 'products'>('partial');
@@ -94,6 +143,20 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   const [secondaryG, setSecondaryG] = useState<number>(255);
   const [secondaryB, setSecondaryB] = useState<number>(255);
   const [splitRatio, setSplitRatio] = useState<number>(50);
+
+  // Set fixed prompt for Step 10 when partial tab is clicked
+  useEffect(() => {
+    if (isStep10 && tutorialProductsTabClicked && finetuneActiveTab === 'partial') {
+      setCustomPrompt('カラフルな幾何学模様のプレイマット、壁には楽しい子供向けのアート、小さな子供用テーブルと椅子、おもちゃの収納棚が置かれた、明るく活気のある子供のプレイルーム。子供は椅子に座っている。');
+    }
+  }, [isStep10, tutorialProductsTabClicked, finetuneActiveTab]);
+
+  // Set category to 家具 for Step 11
+  useEffect(() => {
+    if (isStep11 && tutorialStep11TabClicked) {
+      setSelectedCategoryId('tutorial-furniture');
+    }
+  }, [isStep11, tutorialStep11TabClicked]);
 
   // Exterior painting presets by category
   const exteriorPresetCategories = [
@@ -352,12 +415,18 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   const handleGenerate = () => {
     if (customPrompt.trim()) {
       const isProductsContext = (!isFinetuningMode && activeTab === 'products') || (isFinetuningMode && finetuneActiveTab === 'products');
-      
+
       if (isProductsContext) {
-        const selectedProducts = products.filter(p => selectedProductIds.includes(p.id));
-        if (selectedProducts.length === 0) {
+        // チュートリアルモードStep 11: 自動的にチュートリアル商品を使用
+        let selectedProducts;
+        if (isStep11) {
+          selectedProducts = TUTORIAL_PRODUCTS.products;
+        } else {
+          selectedProducts = products.filter(p => selectedProductIds.includes(p.id));
+          if (selectedProducts.length === 0) {
             alert("使用する商品を1つ以上選択してください。");
             return;
+          }
         }
         
         const category = filteredCategories.find(c => c.id === selectedCategoryId);
@@ -486,6 +555,26 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
     setSuggestionError(null);
     setCustomPrompt('');
     setSelectedProductIds([]);
+
+    // Call tutorial handler when furniture tab is clicked in Step 8
+    if (tutorialMode && tutorialStepIndex === 7 && tabId === 'furniture' && onTutorialFurnitureTabClick) {
+      onTutorialFurnitureTabClick();
+    }
+
+    // Call tutorial handler when person tab is clicked in Step 9
+    if (tutorialMode && tutorialStepIndex === 8 && tabId === 'person' && onTutorialPersonTabClick) {
+      onTutorialPersonTabClick();
+    }
+
+    // Call tutorial handler when partial tab is clicked in Step 10
+    if (tutorialMode && tutorialStepIndex === 9 && tabId === 'partial' && onTutorialProductsTabClick) {
+      onTutorialProductsTabClick();
+    }
+
+    // Call tutorial handler when products tab is clicked in Step 11
+    if (tutorialMode && tutorialStepIndex === 10 && tabId === 'products' && onTutorialStep11TabClick) {
+      onTutorialStep11TabClick();
+    }
   };
 
   const handleSketchFinetuneTabClick = (tabId: SketchFinetuneTabId) => {
@@ -501,13 +590,22 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
     setSelectedProductIds(prev =>
       prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
     );
+
+    // Call tutorial handler when sofa is selected in Step 11
+    if (tutorialMode && tutorialStepIndex === 10 && onTutorialStep11ProductSelect) {
+      onTutorialStep11ProductSelect(id);
+    }
   };
 
   const renderPromptSection = (isFinetune: boolean) => {
     const isFurnitureContext = (appMode === 'renovation') && ((isFinetune && finetuneActiveTab === 'furniture') || (!isFinetune && activeTab === 'furniture'));
     const isPersonContext = (isFinetune && ( (appMode === 'renovation' && finetuneActiveTab === 'person') || (appMode === 'exterior' && exteriorSubMode === 'sketch2arch' && sketchFinetuneActiveTab === 'person') )) || (!isFinetuningMode && activeTab === 'person');
     
-    const placeholder = isPersonContext
+    const placeholder = tutorialMode && tutorialStepIndex === 7 && isFurnitureContext
+      ? "中央にラグを置いて"
+      : tutorialMode && tutorialStepIndex === 8 && isPersonContext
+      ? "子供が寝転がっている"
+      : isPersonContext
       ? (appMode === 'exterior' && exteriorSubMode === 'sketch2arch'
           ? "例：庭でくつろいでいる家族を追加してください。 / 例：エントランスの人物を削除して。"
           : "例：ソファに座って本を読んでいる女性を追加して。 / 例：窓際の男性を削除して。")
@@ -531,11 +629,17 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
     
     const generateButtonText = isFinetune ? '修正を生成' : '生成する';
 
+    // Determine if input area should be elevated (Step 8 after furniture tab clicked or Step 9 after person tab clicked)
+    const isInputAreaInteractive = tutorialMode && (
+      (tutorialStepIndex === 7 && tutorialFurnitureTabClicked && isFurnitureContext) ||
+      (tutorialStepIndex === 8 && tutorialPersonTabClicked && isPersonContext)
+    );
+
     return (
       <div className="space-y-4">
         <button
           onClick={handleSuggest}
-          disabled={isDisabled || isSuggesting}
+          disabled={isDisabled || isSuggesting || isStep8 || isStep9 || isStep10 || isStep11}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 font-semibold text-indigo-600 bg-indigo-100 rounded-md hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
         >
           {isSuggesting ? (
@@ -547,7 +651,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
         </button>
 
         {suggestionError && <p className="text-sm text-center text-red-500">{suggestionError}</p>}
-        
+
         {suggestions.length > 0 && (
             <div className="space-y-2 pt-4 mt-4 border-t border-gray-200">
                 <p className="text-sm font-medium text-gray-600">提案を選択してください:</p>
@@ -562,23 +666,34 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
                 ))}
             </div>
         )}
-        
-        <textarea
-          value={customPrompt}
-          onChange={(e) => setCustomPrompt(e.target.value)}
-          placeholder={placeholder}
-          rows={4}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          disabled={isDisabled}
-        />
-        <button
-          onClick={handleGenerate}
-          disabled={isDisabled || !customPrompt.trim()}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors"
-        >
-          <SparklesIcon className="w-5 h-5" />
-          <span>{generateButtonText}</span>
-        </button>
+
+        {/* Input area wrapper with z-index for tutorial Step 8 */}
+        <div className={isInputAreaInteractive ? 'relative z-50' : ''}>
+          <textarea
+            value={customPrompt}
+            onChange={(e) => {
+              setCustomPrompt(e.target.value);
+              if (onTutorialFurnitureInputChange) {
+                onTutorialFurnitureInputChange(e.target.value);
+              }
+              if (onTutorialPersonInputChange) {
+                onTutorialPersonInputChange(e.target.value);
+              }
+            }}
+            placeholder={placeholder}
+            rows={4}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            disabled={isDisabled}
+          />
+          <button
+            onClick={handleGenerate}
+            disabled={isDisabled || !customPrompt.trim() || (isStep8 && !tutorialFurnitureInputValid) || (isStep9 && !tutorialPersonInputValid)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors mt-4"
+          >
+            <SparklesIcon className="w-5 h-5" />
+            <span>{generateButtonText}</span>
+          </button>
+        </div>
       </div>
     );
   };
@@ -659,7 +774,9 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   );
 
   const renderProductsPanel = () => {
-    const filteredProducts = products.filter(p => p.categoryId === selectedCategoryId);
+    // In tutorial Step 11, use tutorial products
+    const productsToUse = isStep11 ? TUTORIAL_PRODUCTS.products : products;
+    const filteredProducts = productsToUse.filter(p => p.categoryId === selectedCategoryId);
     return (
       <div className="space-y-4">
         <div>
@@ -696,22 +813,29 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
               </p>
           ) : (
               <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 bg-gray-100 rounded-lg">
-                  {filteredProducts.map(product => (
-                      <button
-                          key={product.id}
-                          onClick={() => handleProductSelect(product.id)}
-                          className={`relative w-full aspect-square rounded-md focus:outline-none transition-all duration-200 ${
-                              selectedProductIds.includes(product.id) ? 'ring-4 ring-offset-1 ring-indigo-500' : 'ring-2 ring-transparent hover:ring-indigo-300'
-                          }`}
-                      >
-                          <img src={product.src} alt="商品" className="w-full h-full object-cover rounded-md" />
-                          {selectedProductIds.includes(product.id) && (
-                              <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-md">
-                                  <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                              </div>
-                          )}
-                      </button>
-                  ))}
+                  {filteredProducts.map(product => {
+                      const isHighlightedProduct = isStep11 && product.id === 'tutorial-sofa-1';
+                      return (
+                          <button
+                              key={product.id}
+                              onClick={() => handleProductSelect(product.id)}
+                              className={`relative w-full aspect-square rounded-md focus:outline-none transition-all duration-200 ${
+                                  selectedProductIds.includes(product.id)
+                                      ? 'ring-4 ring-offset-1 ring-indigo-500'
+                                      : isHighlightedProduct
+                                      ? 'ring-4 ring-offset-1 ring-purple-500 animate-pulse'
+                                      : 'ring-2 ring-transparent hover:ring-indigo-300'
+                              }`}
+                          >
+                              <img src={product.src || product.imageUrl} alt="商品" className="w-full h-full object-cover rounded-md" />
+                              {selectedProductIds.includes(product.id) && (
+                                  <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-md">
+                                      <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                                  </div>
+                              )}
+                          </button>
+                      );
+                  })}
               </div>
           )}
         </div>
@@ -720,8 +844,13 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
           <h4 className="text-sm font-medium text-gray-700 mb-1">3. 使い方を指示</h4>
           <textarea
             value={customPrompt}
-            onChange={(e) => setCustomPrompt(e.target.value)}
-            placeholder="例: この壁紙を奥の壁に貼ってください。/ このソファを窓際に配置してください。"
+            onChange={(e) => {
+              setCustomPrompt(e.target.value);
+              if (onTutorialStep11InputChange) {
+                onTutorialStep11InputChange(e.target.value);
+              }
+            }}
+            placeholder={isStep11 ? "このソファを奥の壁に置いて" : "例: この壁紙を奥の壁に貼ってください。/ このソファを窓際に配置してください。"}
             rows={3}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
             disabled={isDisabled}
@@ -729,7 +858,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
         </div>
         <button
           onClick={handleGenerate}
-          disabled={isDisabled || !customPrompt.trim() || selectedProductIds.length === 0}
+          disabled={isDisabled || !customPrompt.trim() || selectedProductIds.length === 0 || (isStep11 && (!tutorialStep11ProductSelected || !tutorialStep11InputValid))}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors"
         >
           <SparklesIcon className="w-5 h-5" />
@@ -1997,9 +2126,14 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
                 <h3 className="text-lg font-bold text-gray-800">微調整モード</h3>
                 <p className="text-sm text-gray-600 mt-1">生成された画像を微調整します。</p>
               </div>
-              <button 
+              <button
                 onClick={onExitFinetuning}
-                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors flex-shrink-0 ml-4"
+                disabled={isStep8 || isStep9 || isStep10 || isStep11}
+                className={`text-sm flex items-center gap-1 transition-colors flex-shrink-0 ml-4 ${
+                  isStep8 || isStep9 || isStep10 || isStep11
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
                 aria-label="比較表示に戻る"
               >
                 <ArrowUturnLeftIcon className="w-4 h-4" />
@@ -2009,37 +2143,57 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
 
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex flex-wrap gap-x-2 gap-y-1" aria-label="Tabs">
-                {FINETUNE_TABS.map((tab) => (
+                {FINETUNE_TABS.map((tab) => {
+                  const isHighlighted = tutorialMode && (
+                    (tutorialStepIndex === 7 && tab.id === 'furniture') ||
+                    (tutorialStepIndex === 8 && tab.id === 'person') ||
+                    (tutorialStepIndex === 9 && tab.id === 'partial') ||
+                    (tutorialStepIndex === 10 && tab.id === 'products')
+                  );
+                  const isDisabledInStep8 = isStep8 && tab.id !== 'furniture';
+                  const isDisabledInStep9 = isStep9 && tab.id !== 'person';
+                  const isDisabledInStep10 = isStep10 && tab.id !== 'partial';
+                  const isDisabledInStep11 = isStep11 && tab.id !== 'products';
+                  const isDisabled = isDisabledInStep8 || isDisabledInStep9 || isDisabledInStep10 || isDisabledInStep11;
+                  return (
                   <button
                     key={tab.id}
-                    onClick={() => handleFinetuneTabClick(tab.id as 'partial' | 'furniture' | 'person' | 'products')}
+                    onClick={() => !isDisabled && handleFinetuneTabClick(tab.id as 'partial' | 'furniture' | 'person' | 'products')}
+                    disabled={isDisabled}
                     className={`${
                       finetuneActiveTab === tab.id
                         ? 'border-indigo-500 text-indigo-600'
+                        : isHighlighted
+                        ? 'border-purple-500 text-purple-600 ring-2 ring-purple-300 ring-opacity-50 animate-pulse'
+                        : isDisabled
+                        ? 'border-transparent text-gray-300 cursor-not-allowed'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     } flex items-center gap-2 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-all`}
                   >
                     <tab.icon className="w-5 h-5"/>
                     {tab.id === 'partial' ? '詳細設定' : tab.name}
                   </button>
-                ))}
+                );
+                })}
               </nav>
             </div>
 
-            {finetuneActiveTab === 'partial' && renderPromptSection(true)}
-            {finetuneActiveTab === 'products' && renderProductsPanel()}
-            {finetuneActiveTab === 'furniture' && (
+            {finetuneActiveTab === 'partial' && !isStep11 && renderPromptSection(true)}
+            {finetuneActiveTab === 'products' && !isStep10 && renderProductsPanel()}
+            {finetuneActiveTab === 'furniture' && !isStep9 && !isStep10 && !isStep11 && (
                 <div className="space-y-4">
-                    {renderFurnitureOptions()}
-                    <div className="relative flex items-center pt-2">
-                        <div className="flex-grow border-t border-gray-200"></div>
-                        <span className="flex-shrink mx-4 text-xs font-semibold text-gray-400 uppercase">指示を入力</span>
-                        <div className="flex-grow border-t border-gray-200"></div>
-                    </div>
+                    {!isStep8 && renderFurnitureOptions()}
+                    {!isStep8 && (
+                      <div className="relative flex items-center pt-2">
+                          <div className="flex-grow border-t border-gray-200"></div>
+                          <span className="flex-shrink mx-4 text-xs font-semibold text-gray-400 uppercase">指示を入力</span>
+                          <div className="flex-grow border-t border-gray-200"></div>
+                      </div>
+                    )}
                     {renderPromptSection(true)}
                 </div>
             )}
-            {finetuneActiveTab === 'person' && renderPromptSection(true)}
+            {finetuneActiveTab === 'person' && !isStep10 && !isStep11 && renderPromptSection(true)}
         </div>
     );
   }
@@ -2049,34 +2203,56 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
       case 'oneClick':
         return (
           <div className="space-y-4">
-            <button
-              onClick={() => onGenerate('oneClick', OMAKASE_PROMPT)}
-              disabled={isDisabled}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              <SparklesIcon className="w-6 h-6" />
-              <span>ワンタップおまかせリノベーション</span>
-            </button>
-             <div className="relative flex items-center py-2">
+            <div className={isStep1 ? 'relative z-50' : ''}>
+              <button
+                onClick={() => onGenerate('oneClick', OMAKASE_PROMPT)}
+                disabled={isDisabled || isStep2 || isStep3}
+                className={`w-full flex items-center justify-center gap-3 px-4 py-3 font-bold rounded-lg transition-all shadow-lg transform ${
+                  isStep2 || isStep3
+                    ? 'text-gray-500 bg-gray-300 cursor-not-allowed'
+                    : isStep1
+                    ? 'text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 hover:shadow-xl hover:-translate-y-0.5 ring-4 ring-purple-300 ring-opacity-50'
+                    : 'text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed hover:shadow-xl hover:-translate-y-0.5'
+                }`}
+                style={isStep1 ? {
+                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                } : undefined}
+              >
+                <SparklesIcon className="w-6 h-6" />
+                <span>ワンタップおまかせリノベーション</span>
+              </button>
+            </div>
+            <div className="relative flex items-center py-2">
               <div className="flex-grow border-t border-gray-300"></div>
               <span className="flex-shrink mx-4 text-sm font-semibold text-gray-500">またはスタイルを選択</span>
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
-            <div className="border rounded-md">
+            <div className={`border rounded-md ${isStep3 ? 'relative z-50' : ''}`}>
               {RENOVATION_CATEGORIES.map((category) => (
                 <div key={category.id} className="border-b border-gray-200 last:border-b-0">
                   <button
-                    onClick={() => setOpenAccordion(openAccordion === category.id ? null : category.id)}
-                    className="w-full flex justify-between items-center p-3 text-left font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => !(isStep1 || isStep2 || (isStep3 && category.id !== 'design_taste')) && setOpenAccordion(openAccordion === category.id ? null : category.id)}
+                    disabled={isStep1 || isStep2 || (isStep3 && category.id !== 'design_taste')}
+                    className={`w-full flex justify-between items-center p-3 text-left font-semibold transition-colors ${
+                      (isStep1 || isStep2 || (isStep3 && category.id !== 'design_taste')) ? 'text-gray-400 cursor-not-allowed bg-gray-50' :
+                      (isStep3 && category.id === 'design_taste') ? 'text-gray-700 hover:bg-gray-50 ring-2 ring-purple-400 bg-purple-50' :
+                      'text-gray-700 hover:bg-gray-50'
+                    }`}
                   >
                     <span className="flex items-center gap-3">
-                      <category.icon className="w-6 h-6 text-indigo-500" />
+                      <category.icon className={`w-6 h-6 ${
+                        (isStep1 || isStep2 || (isStep3 && category.id !== 'design_taste')) ? 'text-gray-400' :
+                        (isStep3 && category.id === 'design_taste') ? 'text-purple-500' :
+                        'text-indigo-500'
+                      }`} />
                       {category.name}
                     </span>
                     <svg
-                      className={`w-5 h-5 text-gray-500 transform transition-transform ${
-                        openAccordion === category.id ? 'rotate-180' : ''
-                      }`}
+                      className={`w-5 h-5 transform transition-transform ${
+                        (isStep1 || isStep2 || (isStep3 && category.id !== 'design_taste')) ? 'text-gray-400' :
+                        (isStep3 && category.id === 'design_taste') ? 'text-purple-500' :
+                        'text-gray-500'
+                      } ${openAccordion === category.id ? 'rotate-180' : ''}`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -2091,8 +2267,17 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
                           <button
                             key={style.id}
                             onClick={() => onGenerate('oneClick', style.id)}
-                            disabled={isDisabled}
-                            className="w-full p-2.5 text-sm font-medium text-left text-gray-600 bg-white rounded-md hover:bg-indigo-100 hover:text-indigo-700 transition-colors border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isDisabled || isStep1 || (isStep3 && style.id !== 'minimalist')}
+                            className={`w-full p-2.5 text-sm font-medium text-left rounded-md transition-colors border ${
+                              (isStep1 || (isStep3 && style.id !== 'minimalist'))
+                                ? 'text-gray-400 bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed'
+                                : (isStep3 && style.id === 'minimalist')
+                                ? 'text-purple-700 bg-purple-50 border-purple-400 hover:bg-purple-100 ring-2 ring-purple-300'
+                                : 'text-gray-600 bg-white border-gray-200 hover:bg-indigo-100 hover:text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                            }`}
+                            style={(isStep3 && style.id === 'minimalist') ? {
+                              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                            } : undefined}
                           >
                             {style.name}
                           </button>
@@ -2129,7 +2314,7 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className={`w-full space-y-4 ${(isStep1 || isStep3) ? 'relative z-50' : ''}`}>
       <div className="flex items-center">
         <h3 className="text-lg font-bold text-gray-800">リノベーションを実行</h3>
         <FeatureTip tip="複数のスタイルを試して比較することで、お客様により多くの選択肢を提案できます。「かんたん」タブのワンタップおまかせ機能なら、AIが自動で最適なリノベーションを提案します。" />
@@ -2139,10 +2324,13 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
           {TABS.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => handleTabClick(tab.id)}
+              onClick={() => !isStep1 && handleTabClick(tab.id)}
+              disabled={isStep1 && tab.id !== 'oneClick'}
               className={`${
                 activeTab === tab.id
                   ? 'border-indigo-500 text-indigo-600'
+                  : isStep1 && tab.id !== 'oneClick'
+                  ? 'border-transparent text-gray-400 cursor-not-allowed'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               } flex items-center gap-2 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-all`}
             >

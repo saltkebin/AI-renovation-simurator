@@ -24,7 +24,7 @@ export const generateRenovationImage = async (
 ): Promise<RenovationResult> => {
   try {
     let finalPrompt = `提供された画像の構図、画角、アスペクト比（約 ${aspectRatio}）を完全に維持したまま、画像全体を以下の指示に従って編集してください。画像の一部だけを切り取ったり、部分的に変更したりすることは絶対に避けてください。編集後の画像のみを返してください。テキストによる返答は一切不要です。指示： ${prompt}`;
-    
+
     if (requestDescription) {
         finalPrompt = `提供された画像の構図、画角、アスペクト比（約 ${aspectRatio}）を完全に維持したまま、画像全体を以下の指示に従って編集してください。画像の一部だけを切り取ったり、部分的に変更したりすることは絶対に避けてください。そして、どのようなコンセプトでリノベーションしたのか、その理由やポイントを150文字程度の短い日本語で説明してください。編集後の画像と、説明文の両方を返してください。指示： ${prompt}`;
     }
@@ -176,7 +176,7 @@ export const generateRenovationWithProducts = async (
   mimeType: string,
   products: RegisteredProduct[],
   prompt: string,
-  aspectRatio: string,
+  aspectRatio: string
 ): Promise<RenovationResult> => {
     try {
         // Build paint product information if available
@@ -331,11 +331,11 @@ ${prompt}`;
 export const generateArchFromSketch = async (
   base64ImageData: string,
   mimeType: string,
-  prompt: string,
+  prompt: string
 ): Promise<RenovationResult> => {
   try {
     const finalPrompt = `これは建築デザインのスケッチ画像です。このスケッチを元に、以下の指示に従って、フォトリアルな完成予想パース画像を生成してください。スケッチに描かれている構図、画角、アングルを完全に維持し、画像全体を完成予想図にしてください。基本的な部屋の構造や家具の配置も忠実に再現してください。画像の一部だけを切り取ったり、部分的に変更したりすることは絶対に避けてください。生成するのはパース画像のみとし、テキストによる返答は一切不要です。指示： ${prompt}`;
-    
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image-preview',
       contents: {
@@ -355,7 +355,7 @@ export const generateArchFromSketch = async (
         responseModalities: [Modality.IMAGE],
       },
     });
-    
+
     if (!response.candidates || response.candidates.length === 0) {
       const blockReason = response.promptFeedback?.blockReason;
       if (blockReason) {

@@ -11,6 +11,7 @@ interface ConfirmationModalProps {
   cancelText?: string;
   confirmButtonColor?: 'red' | 'indigo';
   hideCancelButton?: boolean;
+  nextAction?: string; // 次に何が起こるかの説明
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -23,6 +24,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   cancelText = 'キャンセル',
   confirmButtonColor = 'indigo',
   hideCancelButton = false,
+  nextAction,
 }) => {
   if (!isOpen) {
     return null;
@@ -42,6 +44,17 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <div className="mt-2 text-sm text-gray-600">
           {message}
         </div>
+        {nextAction && (
+          <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+            <div className="flex items-start gap-2">
+              <span className="text-blue-600 flex-shrink-0 mt-0.5">ℹ️</span>
+              <div>
+                <p className="text-xs font-semibold text-blue-800">次に起こること</p>
+                <p className="text-xs text-blue-700 mt-1">{nextAction}</p>
+              </div>
+            </div>
+          </div>
+        )}
         {isLoading ? (
           <div className="mt-6 flex justify-center">
             <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

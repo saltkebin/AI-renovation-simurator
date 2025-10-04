@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { QuotationResult, AppMode, PaintTypeId } from '../types';
 import { CalculatorIcon, ArrowUturnLeftIcon, SpinnerIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon, PlusCircleIcon, DocumentTextIcon } from './Icon';
-import { PAINT_TYPES } from '../constants';
+import { PAINT_TYPES, HELP_TEXTS } from '../constants';
 import CustomerInfoModal, { type CustomerInfo } from './CustomerInfoModal';
 import FeatureTip from './FeatureTip';
+import HelpTooltip from './HelpTooltip';
 
 interface QuotationPanelProps {
   appMode: AppMode;
@@ -183,15 +184,24 @@ const QuotationPanel: React.FC<QuotationPanelProps> = ({
   const renderRenovationInputs = () => (
     <div className="space-y-4">
         <div>
-            <label htmlFor="floor-material" className="block text-sm font-medium text-gray-700">床材</label>
+            <label htmlFor="floor-material" className="flex items-center gap-1 text-sm font-medium text-gray-700">
+              床材
+              <HelpTooltip text={HELP_TEXTS.floorMaterial} />
+            </label>
             <input type="text" id="floor-material" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="例: 無垢材フローリング" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" />
         </div>
         <div>
-            <label htmlFor="wall-material" className="block text-sm font-medium text-gray-700">壁材</label>
+            <label htmlFor="wall-material" className="flex items-center gap-1 text-sm font-medium text-gray-700">
+              壁材
+              <HelpTooltip text={HELP_TEXTS.wallMaterial} />
+            </label>
             <input type="text" id="wall-material" value={wall} onChange={(e) => setWall(e.target.value)} placeholder="例: 珪藻土、漆喰" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" />
         </div>
         <div>
-            <label htmlFor="casing-material" className="block text-sm font-medium text-gray-700">ケーシング (窓枠・ドア枠など)</label>
+            <label htmlFor="casing-material" className="flex items-center gap-1 text-sm font-medium text-gray-700">
+              ケーシング (窓枠・ドア枠など)
+              <HelpTooltip text={HELP_TEXTS.casingMaterial} />
+            </label>
             <input type="text" id="casing-material" value={casing} onChange={(e) => setCasing(e.target.value)} placeholder="例: 木製、アルミ" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" />
         </div>
         <button onClick={() => onGetQuote(floor, wall, casing)} disabled={isQuoting} className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:bg-emerald-300 disabled:cursor-not-allowed transition-colors">
@@ -204,7 +214,10 @@ const QuotationPanel: React.FC<QuotationPanelProps> = ({
   const renderExteriorInputs = () => (
     <div className="space-y-4">
         <div>
-            <label htmlFor="wall-area" className="block text-sm font-medium text-gray-700">外壁面積 (任意)</label>
+            <label htmlFor="wall-area" className="flex items-center gap-1 text-sm font-medium text-gray-700">
+              外壁面積 (任意)
+              <HelpTooltip text={HELP_TEXTS.wallArea} />
+            </label>
             <div className="mt-1 relative rounded-md shadow-sm">
               <input
                 type="number"
@@ -222,7 +235,10 @@ const QuotationPanel: React.FC<QuotationPanelProps> = ({
         </div>
 
         <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">塗料の種類 (任意)</label>
+            <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
+              塗料の種類 (任意)
+              <HelpTooltip text={HELP_TEXTS.paintType} />
+            </label>
             <div className="space-y-2">
               {PAINT_TYPES.map((type) => (
                 <div key={type.id}>
@@ -384,6 +400,7 @@ const QuotationPanel: React.FC<QuotationPanelProps> = ({
           >
             <DocumentTextIcon className="w-5 h-5" />
             <span>本格見積もり用として保存</span>
+            <HelpTooltip text={HELP_TEXTS.saveQuotation} position="top" />
           </button>
         </div>
       </div>

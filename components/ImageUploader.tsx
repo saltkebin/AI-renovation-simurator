@@ -1,15 +1,20 @@
 
 import React, { useState, useRef, useId, useEffect } from 'react';
 import { UploadIcon, ArrowPathIcon } from './Icon';
+import HelpTooltip from './HelpTooltip';
+import { HELP_TEXTS } from '../constants';
 import heic2any from 'heic2any';
 
 interface ImageUploaderProps {
   onImageUpload: (file: File) => void;
   image: string | null;
   onError: (message: string) => void;
+  tutorialMode?: boolean;
+  tutorialStepIndex?: number;
+  onUseSampleImage?: () => void;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, image, onError }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, image, onError, tutorialMode, tutorialStepIndex, onUseSampleImage }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputId = useId();
@@ -108,13 +113,31 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, image, onE
     fileInputRef.current?.click();
   };
 
+  // Tutorial mode: make upload area clickable to load sample image in step 0
+  const isStep0 = tutorialMode === true && tutorialStepIndex === 0;
+
+  const handleLabelClick = (e: React.MouseEvent<HTMLLabelElement>) => {
+    if (isStep0 && onUseSampleImage && !preview) {
+      e.preventDefault();
+      onUseSampleImage();
+    }
+  };
+
   return (
-    <div>
+    <div className={isStep0 && !preview ? 'relative z-50' : ''}>
       <label
-        htmlFor={fileInputId}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        className="relative flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+        htmlFor={isStep0 ? undefined : fileInputId}
+        onClick={handleLabelClick}
+        onDragOver={isStep0 ? undefined : handleDragOver}
+        onDrop={isStep0 ? undefined : handleDrop}
+        className={`relative flex flex-col items-center justify-center w-full h-48 md:h-48 min-h-[12rem] border-2 border-dashed rounded-lg transition-all ${
+          isStep0 && !preview
+            ? 'border-purple-400 bg-purple-50 cursor-pointer hover:bg-purple-100 hover:border-purple-500'
+            : 'border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 active:bg-gray-200'
+        }`}
+        style={isStep0 && !preview ? {
+          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+        } : undefined}
       >
         {preview ? (
           <img src={preview} alt="プレビュー" className="absolute inset-0 w-full h-full object-cover rounded-lg" />
@@ -127,9 +150,10 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, image, onE
         ) : (
           <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
             <UploadIcon className="w-10 h-10 mb-3 text-gray-400" />
-            <p className="mb-2 text-sm text-gray-500">
+            <div className="mb-2 text-sm text-gray-500 flex items-center justify-center gap-1">
               <span className="font-semibold">クリックしてアップロード</span> またはドラッグ&ドロップ
-            </p>
+              <HelpTooltip text={HELP_TEXTS.imageUpload} />
+            </div>
             <p className="text-xs text-gray-500">PNG, JPG, WEBP, HEICなど</p>
           </div>
         )}
@@ -145,10 +169,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, image, onE
       {preview && (
         <button
           onClick={triggerFileSelect}
-          className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           <ArrowPathIcon className="w-5 h-5" />
           <span>画像を切り替える</span>
+          <HelpTooltip text={HELP_TEXTS.imageSwitch} />
         </button>
       )}
     </div>
