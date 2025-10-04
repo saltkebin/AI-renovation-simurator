@@ -593,9 +593,9 @@ export const TUTORIAL_RENOVATION_STEPS: TutorialStep[] = [
   },
   {
     id: 6,
-    title: 'ステップ6: 生成履歴から画像を選択',
-    description: '右側の「生成履歴」から、ミニマリストスタイルの画像（2番目の画像）をクリックして選択してください。この画像を次のステップで使用します。',
-    hint: '生成履歴を使うことで、過去の提案を簡単に見返すことができます。お客様に複数案を提示する際に便利です。',
+    title: 'ステップ6: 画像比較機能を使ってみよう',
+    description: '右側の「生成履歴」から、2番目の画像（ミニマリスト）をクリックして選択してください。生成履歴から画像を選択すると、現在表示されている画像と簡単に比較できます。',
+    hint: '生成履歴を使うことで、過去の提案をワンクリックで切り替えて比較できます。お客様に複数案を提示する際に便利です。',
     action: 'wait',
     highlightTarget: null,
     buttonText: null,
@@ -621,7 +621,7 @@ export const TUTORIAL_RENOVATION_STEPS: TutorialStep[] = [
   {
     id: 9,
     title: 'ステップ9: 人物タブを確認',
-    description: '「人物」タブをクリックしてみましょう。人物の追加・削除ができます。',
+    description: '「人物」タブをクリックして、「子供が寝転がっている」と入力してください。人物の追加・削除ができます。',
     hint: '人物を配置することで、空間の使い方をイメージしやすくなります。また、「AIおすすめ人物配置案」ボタンを使えば、AIが自動で人物の配置案を提案してくれます。',
     action: 'wait',
     highlightTarget: null,
@@ -630,10 +630,10 @@ export const TUTORIAL_RENOVATION_STEPS: TutorialStep[] = [
   {
     id: 10,
     title: 'ステップ10: 詳細タブで自由に指定',
-    description: '「詳細」タブをクリックしてみましょう。テキストで詳細な指示を与えられます。',
+    description: '「詳細」タブをクリックしてみましょう。あらかじめ詳細指示のプロンプトが入力されているので、「修正を生成」ボタンを押してください。',
     hint: '「窓際に観葉植物を置く」など、具体的な指示が可能です。また、「AIおすすめ修正案」ボタンを使えば、AIが自動で修正案を提案してくれます。',
     action: 'wait',
-    highlightTarget: null,
+    highlightTarget: 'generate-button',
     buttonText: null,
   },
   {

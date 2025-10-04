@@ -289,3 +289,13 @@ export const ArrowRightIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =
     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
   </svg>
 );
+
+export const RobotIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5a.75.75 0 011.5 0v1.5h3v-1.5a.75.75 0 011.5 0V6h1.125c.621 0 1.125.504 1.125 1.125v1.125c0 .621-.504 1.125-1.125 1.125H7.875c-.621 0-1.125-.504-1.125-1.125V7.125C6.75 6.504 7.254 6 7.875 6H9V4.5z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 10.5h16.5M5.25 10.5v6.75A2.25 2.25 0 007.5 19.5h9a2.25 2.25 0 002.25-2.25v-6.75" />
+    <circle cx="9" cy="14" r="0.75" fill="currentColor" />
+    <circle cx="15" cy="14" r="0.75" fill="currentColor" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 16.5h4.5" />
+  </svg>
+);

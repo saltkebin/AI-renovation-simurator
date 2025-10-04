@@ -87,24 +87,23 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onNavigateBack, onStartTuto
                 {tutorial.icon}
               </div>
 
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{tutorial.title}</h3>
-              <p className="text-gray-600 text-sm mb-4">{tutorial.description}</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-4">{tutorial.title}</h3>
 
               {tutorial.available ? (
-                <>
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                <button
+                  onClick={() => handleStartTutorial(tutorial.id)}
+                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-xl transition-all shadow-md hover:shadow-lg p-6 text-left"
+                >
+                  <div className="flex items-start gap-3 mb-4">
+                    <PlayCircleIcon className="w-6 h-6 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm leading-relaxed">{tutorial.description}</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-white/90">
                     <span>📚 {tutorial.steps.length} ステップ</span>
                     <span>•</span>
                     <span>⏱️ 約3-5分</span>
                   </div>
-                  <button
-                    onClick={() => handleStartTutorial(tutorial.id)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold rounded-lg transition-all shadow-md hover:shadow-lg"
-                  >
-                    <PlayCircleIcon className="w-5 h-5" />
-                    開始する
-                  </button>
-                </>
+                </button>
               ) : (
                 <div className="text-center">
                   <span className="inline-block px-4 py-2 bg-gray-100 text-gray-500 text-sm font-medium rounded-lg">
@@ -120,10 +119,9 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onNavigateBack, onStartTuto
         <div className="mt-12 max-w-3xl mx-auto bg-indigo-50 border border-indigo-200 rounded-xl p-6">
           <h3 className="text-lg font-bold text-indigo-900 mb-2">💡 チュートリアルのヒント</h3>
           <ul className="text-sm text-indigo-800 space-y-2">
-            <li>• チュートリアルはいつでもスキップまたは終了できます</li>
+            <li>• チュートリアルはいつでも終了できます</li>
             <li>• 実際の操作を体験しながら学べるインタラクティブな形式です</li>
-            <li>• サンプル画像を使用するため、APIコストはかかりません</li>
-            <li>• 完了後は実際の画像で自由に試せます</li>
+            <li>• サンプル画像を使用しています</li>
           </ul>
         </div>
       </div>

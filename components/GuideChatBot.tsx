@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChatBubbleLeftRightIcon, XMarkIcon, PaperAirplaneIcon, SparklesIcon } from './Icon';
+import { RobotIcon, XMarkIcon, PaperAirplaneIcon, SparklesIcon } from './Icon';
 import { db } from '../services/firebase';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { streamChat } from '../services/geminiService';
@@ -203,10 +203,8 @@ ${userGuideContent}`;
         className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-300 flex items-center justify-center z-40 group"
         aria-label="ガイドチャットを開く"
       >
-        <ChatBubbleLeftRightIcon className="w-8 h-8 group-hover:scale-110 transition-transform" />
-        <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-          <SparklesIcon className="w-3 h-3 text-white" />
-        </div>
+        <RobotIcon className="w-8 h-8 group-hover:scale-110 transition-transform" />
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full"></div>
       </button>
 
       {/* チャットウィンドウ */}
@@ -216,7 +214,7 @@ ${userGuideContent}`;
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <SparklesIcon className="w-6 h-6" />
+                <RobotIcon className="w-6 h-6" />
               </div>
               <div>
                 <h3 className="font-bold">AIガイドアシスタント</h3>

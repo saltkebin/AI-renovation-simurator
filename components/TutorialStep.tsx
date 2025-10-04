@@ -82,7 +82,7 @@ const TutorialStep: React.FC<TutorialStepProps> = ({
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex flex-col gap-2 mt-4">
+        <div className="mt-4">
           {/* Next Button */}
           <button
             onClick={onNext}
@@ -99,27 +99,16 @@ const TutorialStep: React.FC<TutorialStepProps> = ({
             {!isLastStep && <ArrowRightIcon className="w-4 h-4" />}
           </button>
 
-          {/* Secondary Actions */}
-          <div className="flex gap-2">
-            {/* Exit Button */}
+          {/* Exit Button - small and right-aligned with spacing */}
+          <div className="flex justify-end mt-4">
             <button
               onClick={() => setShowExitModal(true)}
-              className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm"
+              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors"
               title="チュートリアルを終了"
             >
               <XIcon className="w-3 h-3" />
               終了
             </button>
-
-            {/* Skip Button */}
-            {!isLastStep && (
-              <button
-                onClick={onSkip}
-                className="flex-1 px-3 py-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors text-sm"
-              >
-                スキップ
-              </button>
-            )}
           </div>
         </div>
       </div>

@@ -291,11 +291,11 @@ AIリノベーション・シミュレーターは、写真から理想の空間
               title="AIリノベーション"
               icon={<SparklesIcon className="w-7 h-7" />}
             >
-              <div className="mb-6">
+              <div className="mb-6 flex justify-center">
                 <img
                   src="/images/guide/1.png"
                   alt="AIリノベーション画面"
-                  className="w-full rounded-xl border-2 border-gray-300 shadow-lg"
+                  className="max-w-full rounded-xl border-2 border-gray-300 shadow-lg"
                 />
               </div>
               <p className="text-gray-700 mb-4 leading-relaxed">

@@ -116,29 +116,46 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, image, onE
   // Tutorial mode: make upload area clickable to load sample image in step 0
   const isStep0 = tutorialMode === true && tutorialStepIndex === 0;
 
-  const handleLabelClick = (e: React.MouseEvent<HTMLLabelElement>) => {
+  const handleLabelClick = (e: React.MouseEvent<HTMLLabelElement | HTMLDivElement>) => {
     if (isStep0 && onUseSampleImage && !preview) {
       e.preventDefault();
       onUseSampleImage();
+    } else if (tutorialMode && preview) {
+      // Tutorial mode: prevent changing image after upload
+      e.preventDefault();
     }
   };
 
   return (
     <div className={isStep0 && !preview ? 'relative z-50' : ''}>
-      <label
-        htmlFor={isStep0 ? undefined : fileInputId}
-        onClick={handleLabelClick}
-        onDragOver={isStep0 ? undefined : handleDragOver}
-        onDrop={isStep0 ? undefined : handleDrop}
-        className={`relative flex flex-col items-center justify-center w-full h-48 md:h-48 min-h-[12rem] border-2 border-dashed rounded-lg transition-all ${
-          isStep0 && !preview
-            ? 'border-purple-400 bg-purple-50 cursor-pointer hover:bg-purple-100 hover:border-purple-500'
-            : 'border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 active:bg-gray-200'
-        }`}
-        style={isStep0 && !preview ? {
-          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-        } : undefined}
-      >
+      {isStep0 && !preview ? (
+        <div
+          onClick={handleLabelClick}
+          className="relative flex flex-col items-center justify-center w-full h-48 md:h-48 min-h-[12rem] border-2 border-dashed rounded-lg transition-all border-purple-400 bg-purple-50 cursor-pointer hover:bg-purple-100 hover:border-purple-500"
+          style={{
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          }}
+        >
+          <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+            <UploadIcon className="w-10 h-10 mb-3 text-purple-600" />
+            <div className="mb-2 text-sm text-purple-700 font-semibold">
+              サンプル画像を使用
+            </div>
+            <p className="text-xs text-purple-600">クリックして読み込む</p>
+          </div>
+        </div>
+      ) : (
+        <label
+          htmlFor={tutorialMode && preview ? undefined : fileInputId}
+          onClick={tutorialMode && preview ? handleLabelClick : undefined}
+          onDragOver={tutorialMode && preview ? undefined : handleDragOver}
+          onDrop={tutorialMode && preview ? undefined : handleDrop}
+          className={`relative flex flex-col items-center justify-center w-full h-48 md:h-48 min-h-[12rem] border-2 border-dashed rounded-lg transition-all ${
+            tutorialMode && preview
+              ? 'border-gray-300 cursor-default bg-gray-50'
+              : 'border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 active:bg-gray-200'
+          }`}
+        >
         {preview ? (
           <img src={preview} alt="プレビュー" className="absolute inset-0 w-full h-full object-cover rounded-lg" />
         ) : isConverting ? (
@@ -166,7 +183,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, image, onE
           onChange={handleFileChange}
         />
       </label>
-      {preview && (
+      )}
+      {preview && !tutorialMode && (
         <button
           onClick={triggerFileSelect}
           className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"

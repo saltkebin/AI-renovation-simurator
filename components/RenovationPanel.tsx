@@ -700,7 +700,11 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
           <button
             onClick={handleGenerate}
             disabled={isDisabled || !customPrompt.trim() || (isStep8 && !tutorialFurnitureInputValid) || (isStep9 && !tutorialPersonInputValid)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors mt-4"
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white rounded-md transition-colors mt-4 ${
+              tutorialMode && tutorialStepIndex === 9
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 ring-4 ring-purple-300 ring-opacity-50 animate-pulse'
+                : 'bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed'
+            }`}
           >
             <SparklesIcon className="w-5 h-5" />
             <span>{generateButtonText}</span>
@@ -871,7 +875,11 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
         <button
           onClick={handleGenerate}
           disabled={isDisabled || !customPrompt.trim() || selectedProductIds.length === 0 || (isStep11 && (!tutorialStep11ProductSelected || !tutorialStep11InputValid))}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors"
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2 font-bold text-white rounded-md transition-colors ${
+            tutorialMode && tutorialStepIndex === 10 && tutorialStep11ProductSelected && tutorialStep11InputValid
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 ring-4 ring-purple-300 ring-opacity-50 animate-pulse'
+              : 'bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed'
+          }`}
         >
           <SparklesIcon className="w-5 h-5" />
           <span>{isFinetuningMode ? '商品を使って修正' : '商品を使って生成'}</span>

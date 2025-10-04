@@ -10,6 +10,7 @@ interface HistoryPanelProps {
   tutorialMode?: boolean;
   tutorialStepIndex?: number;
   onTutorialHistoryClick?: (imageUrl: string, imageIndex: number) => void;
+  tutorialStep11TabClicked?: boolean;
 }
 
 const HistoryThumbnail: React.FC<{
@@ -54,7 +55,8 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({
   originalImageLabel = 'オリジナル',
   tutorialMode,
   tutorialStepIndex,
-  onTutorialHistoryClick
+  onTutorialHistoryClick,
+  tutorialStep11TabClicked
 }) => {
   if (!originalImage && generatedImages.length === 0) {
     return null;
@@ -88,9 +90,9 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({
         {generatedImages.map((img, index) => {
           // Highlight minimalist image
           // Step 6: first generated image (index 0)
-          // Step 11: find the image with 'tutorial-minimalist' description
+          // Step 11: find the image with 'tutorial-minimalist' description (but stop highlighting after tab clicked)
           const isMinimalistImage = isStep5 && index === 0;
-          const isMinimalistForStep11 = isStep10 && img.description === 'tutorial-minimalist';
+          const isMinimalistForStep11 = isStep10 && img.description === 'tutorial-minimalist' && !tutorialStep11TabClicked;
           const isHighlighted = isMinimalistImage || isMinimalistForStep11;
           const isDisabled = (isStep10 && img.description !== 'tutorial-minimalist') || isStep11;
 

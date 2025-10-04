@@ -1453,7 +1453,7 @@ const App: React.FC = () => {
 
           {/* Mobile: Action buttons */}
           {!isLoading && activeGeneratedImage && (
-             <div className={`text-center mb-6 flex justify-center items-center gap-4 flex-wrap ${tutorialMode && (tutorialStepIndex === 5 || tutorialStepIndex === 11) ? 'pointer-events-none' : ''}`}>
+             <div className={`text-center mb-6 flex justify-center items-center gap-4 flex-wrap ${tutorialMode && (tutorialStepIndex === 5 || tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11ImageGenerated)) ? 'pointer-events-none' : ''}`}>
               {!isFinetuningMode && !isQuotationMode && (
                 <>
                   <button
@@ -1479,9 +1479,9 @@ const App: React.FC = () => {
                   {(appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                     <button
                       onClick={handleEnterQuotationMode}
-                      disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
+                      disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected && !tutorialStep11FinetuneStarted) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
                       className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 touch-manipulation ${
-                        tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
+                        tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected && !tutorialStep11FinetuneStarted) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
                           ? 'opacity-50 cursor-not-allowed bg-emerald-600 text-white'
                           : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
                       }`}
@@ -1496,9 +1496,9 @@ const App: React.FC = () => {
               {isFinetuningMode && !isQuotationMode && (appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                 <button
                   onClick={handleEnterQuotationMode}
-                  disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
+                  disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
                   className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 touch-manipulation ${
-                    tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
+                    tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
                       ? 'opacity-50 cursor-not-allowed bg-emerald-600 text-white'
                       : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
                   }`}
@@ -1509,11 +1509,11 @@ const App: React.FC = () => {
               )}
                <button
                 onClick={handleDownload}
-                disabled={tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked}
+                disabled={tutorialMode && ((tutorialStepIndex === 10 && tutorialStep11HistorySelected && !tutorialStep11FinetuneStarted) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
                 className={`inline-flex items-center gap-2 px-6 py-3 font-bold rounded-lg border transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
                   tutorialMode && tutorialStepIndex === 11
                     ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-purple-500 hover:from-purple-600 hover:to-indigo-700 ring-4 ring-purple-300 ring-opacity-50 animate-pulse pointer-events-auto relative z-50'
-                    : tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked
+                    : tutorialMode && ((tutorialStepIndex === 10 && tutorialStep11HistorySelected && !tutorialStep11FinetuneStarted) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
                     ? 'opacity-50 cursor-not-allowed bg-white text-gray-700 border-gray-300'
                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                 }`}
@@ -1526,13 +1526,11 @@ const App: React.FC = () => {
 
           {/* Step 12 Guide Arrow for Mobile */}
           {tutorialMode && tutorialStepIndex === 11 && !isLoading && activeGeneratedImage && (
-            <div className="relative mb-4">
-              <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
-                <div className="text-purple-600 font-bold text-base mb-1">↓ ダウンロード ↓</div>
-                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-              </div>
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
+              <div className="text-purple-600 font-bold text-xl mb-2 bg-white/90 px-4 py-2 rounded-lg shadow-lg">↓ ダウンロード ↓</div>
+              <svg className="w-12 h-12 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
             </div>
           )}
 
@@ -1548,6 +1546,7 @@ const App: React.FC = () => {
                 tutorialMode: true,
                 tutorialStepIndex: tutorialStepIndex,
                 onTutorialHistoryClick: handleTutorialHistoryClick,
+                tutorialStep11TabClicked: tutorialStep11TabClicked,
               })}
             />
           )}
@@ -1608,7 +1607,7 @@ const App: React.FC = () => {
                         onCommercialContextChange: setCommercialContext,
                       })}
                       onGenerate={handleGenerate}
-                      isDisabled={isLoading || (tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked)}
+                      isDisabled={isLoading || (tutorialMode && tutorialStepIndex === 6) || (tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked)}
                       activeImage={isFinetuningMode && activeGeneratedImage ? activeGeneratedImage.src : originalImage}
                       mimeType={mimeType}
                       isFinetuningMode={isFinetuningMode}
@@ -1682,12 +1681,12 @@ const App: React.FC = () => {
 
         {/* Desktop: Original layout */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-8" style={{ height: 'calc(100vh - 10rem)' }}>
-          <div className={`lg:col-span-4 xl:col-span-3 overflow-y-auto relative ${tutorialMode && (tutorialStepIndex === 0 || tutorialStepIndex === 1 || (tutorialStepIndex >= 7 && tutorialStepIndex <= 10)) ? 'z-50' : ''} ${tutorialMode && ((tutorialStepIndex === 8 && tutorialPersonImageGenerated) || (tutorialStepIndex === 9 && tutorialProductsImageGenerated)) ? 'pointer-events-none opacity-50' : ''}`}>
+          <div className={`lg:col-span-4 xl:col-span-3 overflow-y-auto relative ${tutorialMode && (tutorialStepIndex === 0 || tutorialStepIndex === 1 || (tutorialStepIndex >= 6 && tutorialStepIndex <= 10)) ? 'z-50' : ''} ${tutorialMode && (tutorialStepIndex === 6 || (tutorialStepIndex === 8 && tutorialPersonImageGenerated) || (tutorialStepIndex === 9 && tutorialProductsImageGenerated) || (tutorialStepIndex === 10 && !tutorialStep11FinetuneStarted)) ? 'pointer-events-none opacity-50' : ''}`}>
             {/* Step 4 Guide Arrow */}
             {tutorialMode && tutorialStepIndex === 3 && (
-              <div className="absolute top-[280px] left-1/2 -translate-x-1/2 z-50 flex flex-col items-center animate-bounce">
-                <div className="text-purple-600 font-bold text-base mb-1">↓ デザインテイストへ ↓</div>
-                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+              <div className="absolute top-[280px] left-1/2 -translate-x-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
+                <div className="text-purple-600 font-bold text-xl mb-2 bg-white/90 px-4 py-2 rounded-lg shadow-lg">↓ デザインテイストへ ↓</div>
+                <svg className="w-12 h-12 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -1747,7 +1746,7 @@ const App: React.FC = () => {
                           onCommercialContextChange: setCommercialContext,
                         })}
                         onGenerate={handleGenerate}
-                        isDisabled={isLoading || (tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked)}
+                        isDisabled={isLoading || (tutorialMode && tutorialStepIndex === 6) || (tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked)}
                         activeImage={isFinetuningMode && activeGeneratedImage ? activeGeneratedImage.src : originalImage}
                         mimeType={mimeType}
                         isFinetuningMode={isFinetuningMode}
@@ -1781,7 +1780,7 @@ const App: React.FC = () => {
               )}
             </div>
           </div>
-          <div className={`lg:col-span-8 xl:col-span-9 overflow-y-auto relative ${tutorialMode && (tutorialStepIndex === 5 || tutorialStepIndex === 10 || tutorialStepIndex === 11) ? 'z-50' : ''}`}>
+          <div className={`lg:col-span-8 xl:col-span-9 overflow-y-auto relative ${tutorialMode && (tutorialStepIndex === 5 || tutorialStepIndex === 10 || tutorialStepIndex === 11) ? 'z-50' : ''} ${tutorialMode && tutorialStepIndex === 10 && (tutorialStep11TabClicked || tutorialStep11ImageGenerated) ? 'pointer-events-none' : ''}`}>
             {/* Step 6: Internal overlay to block everything except HistoryPanel */}
             {tutorialMode && tutorialStepIndex === 5 && (
               <div className="absolute inset-0 z-40 pointer-events-auto" />
@@ -1790,8 +1789,8 @@ const App: React.FC = () => {
             {/* Step 6 Guide Arrow */}
             {tutorialMode && tutorialStepIndex === 5 && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
-                <div className="text-purple-600 font-bold text-base mb-1">↓ 履歴から選択 ↓</div>
-                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                <div className="text-purple-600 font-bold text-xl mb-2 bg-white/90 px-4 py-2 rounded-lg shadow-lg">↓ 履歴から選択 ↓</div>
+                <svg className="w-12 h-12 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -1963,7 +1962,7 @@ const App: React.FC = () => {
 
           {/* Desktop: Action buttons */}
           {!isLoading && activeGeneratedImage && (
-             <div className={`text-center mt-6 flex justify-center items-center gap-4 flex-wrap ${tutorialMode && (tutorialStepIndex === 5 || tutorialStepIndex === 11) ? 'pointer-events-none' : ''}`}>
+             <div className={`text-center mt-6 flex justify-center items-center gap-4 flex-wrap ${tutorialMode && (tutorialStepIndex === 5 || tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11ImageGenerated)) ? 'pointer-events-none' : ''}`}>
               {!isFinetuningMode && !isQuotationMode && (
                 <>
                   <button
@@ -1989,9 +1988,9 @@ const App: React.FC = () => {
                   {(appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                     <button
                       onClick={handleEnterQuotationMode}
-                      disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
+                      disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected && !tutorialStep11FinetuneStarted) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
                       className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 touch-manipulation ${
-                        tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
+                        tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected && !tutorialStep11FinetuneStarted) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
                           ? 'opacity-50 cursor-not-allowed bg-emerald-600 text-white'
                           : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
                       }`}
@@ -2006,9 +2005,9 @@ const App: React.FC = () => {
               {isFinetuningMode && !isQuotationMode && (appMode === 'renovation' || (appMode === 'exterior' && exteriorSubMode === 'exterior_painting')) && (
                 <button
                   onClick={handleEnterQuotationMode}
-                  disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
+                  disabled={tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
                   className={`inline-flex items-center gap-2 px-6 py-3 min-h-[48px] font-bold rounded-lg transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 touch-manipulation ${
-                    tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
+                    tutorialMode && (tutorialStepIndex === 11 || (tutorialStepIndex === 10 && tutorialStep11HistorySelected) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
                       ? 'opacity-50 cursor-not-allowed bg-emerald-600 text-white'
                       : 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
                   }`}
@@ -2019,11 +2018,11 @@ const App: React.FC = () => {
               )}
                <button
                 onClick={handleDownload}
-                disabled={tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked}
+                disabled={tutorialMode && ((tutorialStepIndex === 10 && tutorialStep11HistorySelected && !tutorialStep11FinetuneStarted) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))}
                 className={`inline-flex items-center gap-2 px-6 py-3 font-bold rounded-lg border transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
                   tutorialMode && tutorialStepIndex === 11
                     ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-purple-500 hover:from-purple-600 hover:to-indigo-700 ring-4 ring-purple-300 ring-opacity-50 animate-pulse pointer-events-auto relative z-50'
-                    : tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked
+                    : tutorialMode && ((tutorialStepIndex === 10 && tutorialStep11HistorySelected && !tutorialStep11FinetuneStarted) || (tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked))
                     ? 'opacity-50 cursor-not-allowed bg-white text-gray-700 border-gray-300'
                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                 }`}
@@ -2036,13 +2035,11 @@ const App: React.FC = () => {
 
           {/* Step 12 Guide Arrow for Desktop */}
           {tutorialMode && tutorialStepIndex === 11 && !isLoading && activeGeneratedImage && (
-            <div className="relative mb-4">
-              <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
-                <div className="text-purple-600 font-bold text-base mb-1">↓ ダウンロード ↓</div>
-                <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-              </div>
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col items-center animate-bounce pointer-events-none">
+              <div className="text-purple-600 font-bold text-xl mb-2 bg-white/90 px-4 py-2 rounded-lg shadow-lg">↓ ダウンロード ↓</div>
+              <svg className="w-12 h-12 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v10.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
             </div>
           )}
 
@@ -2058,6 +2055,7 @@ const App: React.FC = () => {
                 tutorialMode: true,
                 tutorialStepIndex: tutorialStepIndex,
                 onTutorialHistoryClick: handleTutorialHistoryClick,
+                tutorialStep11TabClicked: tutorialStep11TabClicked,
               })}
             />
           )}
