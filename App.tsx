@@ -24,7 +24,7 @@ import TutorialPage from './components/TutorialPage';
 import TutorialStep from './components/TutorialStep';
 import type { CustomerInfo } from './components/CustomerInfoModal';
 import { generateRenovationImage, generateQuotation, generateArchFromSketch, generateRenovationWithProducts, generateExteriorPaintingQuotation } from './services/geminiService';
-import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory, ExteriorSubMode } from './types';
+import type { RenovationMode, RenovationStyle, GeneratedImage, QuotationResult, RegisteredProduct, AppMode, ProductCategory, ExteriorSubMode, RenovationSubMode, FacilityType, OriginalSpaceType, CommercialStep, CommercialRenovationContext } from './types';
 import { RENOVATION_PROMPTS, OMAKASE_PROMPT, UPDATE_HISTORY, HELP_TEXTS, TUTORIAL_RENOVATION_STEPS, TUTORIAL_SAMPLE_IMAGES } from './constants';
 import { SparklesIcon, ArrowDownTrayIcon, CalculatorIcon, PaintBrushIcon, PencilIcon, TrashIcon } from './components/Icon';
 import FeatureTip from './components/FeatureTip';
@@ -32,6 +32,7 @@ import HelpTooltip from './components/HelpTooltip';
 import { db, storage, verifyPin } from './services/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { featureFlags } from './src/config/featureFlags';
 
 type AppView = 'main' | 'database';
 type SelectedApp = 'menu' | 'renovation' | 'quotation' | 'email-settings' | 'sales-chatbot' | 'tenant-settings' | 'quotation-item-masters' | 'quotation-templates' | 'user-guide' | 'tutorial';
@@ -80,6 +81,29 @@ const App: React.FC = () => {
   const [activeGeneratedImage, setActiveGeneratedImage] = useLocalStorage<GeneratedImage | null>('airenovation-activeGeneratedImage', null);
   const [appMode, setAppMode] = useLocalStorage<AppMode>('airenovation-appMode', 'renovation');
   const [exteriorSubMode, setExteriorSubMode] = useLocalStorage<ExteriorSubMode>('airenovation-exteriorSubMode', 'sketch2arch');
+
+  // Commercial facility renovation states (development only)
+  const [renovationSubMode, setRenovationSubMode] = useLocalStorage<RenovationSubMode>('airenovation-renovationSubMode', 'residential');
+  const [commercialContext, setCommercialContext] = useLocalStorage<CommercialRenovationContext>('airenovation-commercialContext', {
+    facilityType: null,
+    originalSpaceType: null,
+    currentStep: 'facility_definition',
+    generationCount: 0,
+    conceptKeywords: [],
+    targetScale: '',
+    zoningData: {
+      areas: [],
+      flowPattern: ''
+    },
+    designDetails: {
+      themes: new Map(),
+      colorScheme: [],
+      materials: []
+    },
+    promptHistory: [],
+    lastGeneratedImageUrl: null
+  });
+
   const [mimeType, setMimeType] = useLocalStorage<string>('airenovation-mimeType', '');
   const [displayAspectRatio, setDisplayAspectRatio] = useLocalStorage<string>('airenovation-displayAspectRatio', 'auto');
   const [originalImageAspectRatio, setOriginalImageAspectRatio] = useLocalStorage<string>('airenovation-originalImageAspectRatio', '4:3');
@@ -1548,6 +1572,12 @@ const App: React.FC = () => {
                       appMode={appMode}
                       exteriorSubMode={exteriorSubMode}
                       onExteriorSubModeChange={setExteriorSubMode}
+                      {...(featureFlags.enableCommercialMode && {
+                        renovationSubMode: renovationSubMode,
+                        onRenovationSubModeChange: setRenovationSubMode,
+                        commercialContext: commercialContext,
+                        onCommercialContextChange: setCommercialContext,
+                      })}
                       onGenerate={handleGenerate}
                       isDisabled={isLoading || (tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked)}
                       activeImage={isFinetuningMode && activeGeneratedImage ? activeGeneratedImage.src : originalImage}
@@ -1681,6 +1711,12 @@ const App: React.FC = () => {
                         appMode={appMode}
                         exteriorSubMode={exteriorSubMode}
                         onExteriorSubModeChange={setExteriorSubMode}
+                        {...(featureFlags.enableCommercialMode && {
+                          renovationSubMode: renovationSubMode,
+                          onRenovationSubModeChange: setRenovationSubMode,
+                          commercialContext: commercialContext,
+                          onCommercialContextChange: setCommercialContext,
+                        })}
                         onGenerate={handleGenerate}
                         isDisabled={isLoading || (tutorialMode && tutorialStepIndex === 10 && tutorialStep11FinetuneStarted && !tutorialStep11TabClicked)}
                         activeImage={isFinetuningMode && activeGeneratedImage ? activeGeneratedImage.src : originalImage}

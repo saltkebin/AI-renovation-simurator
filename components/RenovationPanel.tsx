@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
 // FIX: Import AppMode type.
-import type { RenovationMode, FurnitureStyleId, RoomTypeId, RegisteredProduct, ProductCategory, ArchOption, AppMode, SketchCategory, SketchFinetuneTabId, SketchFinetuneOption, ExteriorSubMode, ColorMode } from '../types';
-import { RENOVATION_CATEGORIES, OMAKASE_PROMPT, OMAKASE_SKETCH_PROMPT, FURNITURE_STYLES, ROOM_TYPES, SKETCH_CATEGORIES, SKETCH_FINETUNE_TABS, EXTERIOR_COLORS, EXTERIOR_MATERIALS, SPLIT_RATIOS, TUTORIAL_PRODUCTS } from '../constants';
+import type { RenovationMode, FurnitureStyleId, RoomTypeId, RegisteredProduct, ProductCategory, ArchOption, AppMode, SketchCategory, SketchFinetuneTabId, SketchFinetuneOption, ExteriorSubMode, ColorMode, RenovationSubMode, FacilityType, OriginalSpaceType, CommercialStep, CommercialRenovationContext } from '../types';
+import { RENOVATION_CATEGORIES, OMAKASE_PROMPT, OMAKASE_SKETCH_PROMPT, FURNITURE_STYLES, ROOM_TYPES, SKETCH_CATEGORIES, SKETCH_FINETUNE_TABS, EXTERIOR_COLORS, EXTERIOR_MATERIALS, SPLIT_RATIOS, TUTORIAL_PRODUCTS, FACILITY_TYPES, ORIGINAL_SPACE_TYPES, COMMERCIAL_STEPS } from '../constants';
 import { MagicWandIcon, EditIcon, SparklesIcon, LightBulbIcon, SpinnerIcon, ArrowUturnLeftIcon, SofaIcon, UserGroupIcon, BuildingStorefrontIcon, HomeModernIcon, CubeIcon, SwatchIcon, DocumentTextIcon, PencilIcon, PaintBrushIcon, TrashIcon } from './Icon';
 import { generateSuggestions } from '../services/geminiService';
 import FeatureTip from './FeatureTip';
+import { featureFlags } from '../src/config/featureFlags';
 
 interface RenovationPanelProps {
   // FIX: Added appMode prop to accept the application's current mode.
   appMode: AppMode;
   exteriorSubMode?: ExteriorSubMode;
   onExteriorSubModeChange?: (mode: ExteriorSubMode) => void;
+
+  // Commercial facility renovation props (development only)
+  renovationSubMode?: RenovationSubMode;
+  onRenovationSubModeChange?: (mode: RenovationSubMode) => void;
+  commercialContext?: CommercialRenovationContext;
+  onCommercialContextChange?: (context: CommercialRenovationContext) => void;
+
   onGenerate: (mode: RenovationMode | 'sketch' | 'partial', prompt: string, products?: RegisteredProduct[]) => void;
   isDisabled: boolean;
   activeImage: string | null;
@@ -51,6 +59,10 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
   appMode,
   exteriorSubMode = 'sketch2arch',
   onExteriorSubModeChange,
+  renovationSubMode = 'residential',
+  onRenovationSubModeChange,
+  commercialContext,
+  onCommercialContextChange,
   onGenerate,
   isDisabled,
   activeImage,
@@ -2198,6 +2210,451 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
     );
   }
 
+  const renderCommercialModeUI = () => {
+    if (!commercialContext || !onCommercialContextChange) {
+      return null;
+    }
+
+    // Determine current phase based on generation count
+    const getCurrentPhase = (): CommercialStep => {
+      const count = commercialContext.generationCount;
+      if (count <= 2) return 'facility_definition';
+      if (count <= 5) return 'zoning';
+      if (count <= 8) return 'detail_design';
+      return 'finishing';
+    };
+
+    const currentPhase = getCurrentPhase();
+
+    // Update currentStep if it doesn't match
+    if (commercialContext.currentStep !== currentPhase) {
+      onCommercialContextChange({
+        ...commercialContext,
+        currentStep: currentPhase,
+      });
+    }
+
+    const handleFacilityTypeChange = (type: FacilityType) => {
+      onCommercialContextChange({
+        ...commercialContext,
+        facilityType: type,
+      });
+    };
+
+    const handleOriginalSpaceTypeChange = (type: OriginalSpaceType) => {
+      onCommercialContextChange({
+        ...commercialContext,
+        originalSpaceType: type,
+      });
+    };
+
+    const handleConceptKeywordsChange = (keywords: string[]) => {
+      onCommercialContextChange({
+        ...commercialContext,
+        conceptKeywords: keywords,
+      });
+    };
+
+    const handleTargetScaleChange = (scale: string) => {
+      onCommercialContextChange({
+        ...commercialContext,
+        targetScale: scale,
+      });
+    };
+
+    const handleZoningAreasChange = (areas: string[]) => {
+      onCommercialContextChange({
+        ...commercialContext,
+        zoningData: {
+          ...commercialContext.zoningData,
+          areas,
+        },
+      });
+    };
+
+    const handleFlowPatternChange = (pattern: string) => {
+      onCommercialContextChange({
+        ...commercialContext,
+        zoningData: {
+          ...commercialContext.zoningData,
+          flowPattern: pattern,
+        },
+      });
+    };
+
+    const handleColorSchemeChange = (colors: string[]) => {
+      onCommercialContextChange({
+        ...commercialContext,
+        designDetails: {
+          ...commercialContext.designDetails,
+          colorScheme: colors,
+        },
+      });
+    };
+
+    const handleMaterialsChange = (materials: string[]) => {
+      onCommercialContextChange({
+        ...commercialContext,
+        designDetails: {
+          ...commercialContext.designDetails,
+          materials,
+        },
+      });
+    };
+
+    const canGenerate = commercialContext.facilityType && commercialContext.originalSpaceType && activeImage;
+
+    // Phase-specific data for facility type
+    const facilityAdjustments = commercialContext.facilityType
+      ? FACILITY_ADJUSTMENT_ITEMS[commercialContext.facilityType]
+      : [];
+
+    // Build cumulative prompt
+    const buildPrompt = (additionalInstructions: string = ''): string => {
+      let prompt = `商業施設リノベーション（第${commercialContext.generationCount + 1}回目）\n`;
+      prompt += `施設タイプ: ${FACILITY_TYPES.find(f => f.id === commercialContext.facilityType)?.name}\n`;
+      prompt += `元の空間: ${ORIGINAL_SPACE_TYPES.find(s => s.id === commercialContext.originalSpaceType)?.name}\n`;
+
+      if (commercialContext.conceptKeywords.length > 0) {
+        prompt += `コンセプト: ${commercialContext.conceptKeywords.join(', ')}\n`;
+      }
+      if (commercialContext.targetScale) {
+        prompt += `規模: ${commercialContext.targetScale}\n`;
+      }
+
+      // Phase-specific additions
+      if (currentPhase === 'zoning' || currentPhase === 'detail_design' || currentPhase === 'finishing') {
+        if (commercialContext.zoningData.areas.length > 0) {
+          prompt += `エリア構成: ${commercialContext.zoningData.areas.join(', ')}\n`;
+        }
+        if (commercialContext.zoningData.flowPattern) {
+          prompt += `動線パターン: ${commercialContext.zoningData.flowPattern}\n`;
+        }
+      }
+
+      if (currentPhase === 'detail_design' || currentPhase === 'finishing') {
+        if (commercialContext.designDetails.colorScheme.length > 0) {
+          prompt += `カラースキーム: ${commercialContext.designDetails.colorScheme.join(', ')}\n`;
+        }
+        if (commercialContext.designDetails.materials.length > 0) {
+          prompt += `素材: ${commercialContext.designDetails.materials.join(', ')}\n`;
+        }
+      }
+
+      if (additionalInstructions) {
+        prompt += `\n追加指示: ${additionalInstructions}`;
+      }
+
+      return prompt;
+    };
+
+    const handleGenerate = (additionalInstructions: string = '') => {
+      if (canGenerate) {
+        const prompt = buildPrompt(additionalInstructions);
+
+        // Update generation count and add to prompt history
+        onCommercialContextChange({
+          ...commercialContext,
+          generationCount: commercialContext.generationCount + 1,
+          promptHistory: [...commercialContext.promptHistory, prompt],
+        });
+
+        onGenerate('oneClick', prompt);
+      }
+    };
+
+    const getPhaseInfo = () => {
+      switch (currentPhase) {
+        case 'facility_definition':
+          return {
+            title: 'フェーズ 1: 施設定義',
+            description: 'リノベーションする施設のタイプと元の空間を選択してください',
+            count: `${commercialContext.generationCount + 1}/3回目`,
+          };
+        case 'zoning':
+          return {
+            title: 'フェーズ 2: ゾーニング・レイアウト',
+            description: 'エリア配置と動線パターンを設定してください',
+            count: `${commercialContext.generationCount + 1}/6回目`,
+          };
+        case 'detail_design':
+          return {
+            title: 'フェーズ 3: 詳細デザイン',
+            description: 'カラースキームと素材を選択してください',
+            count: `${commercialContext.generationCount + 1}/9回目`,
+          };
+        case 'finishing':
+          return {
+            title: 'フェーズ 4: 仕上げ',
+            description: '最終的な調整とディテールを追加してください',
+            count: `第${commercialContext.generationCount + 1}回目`,
+          };
+      }
+    };
+
+    const phaseInfo = getPhaseInfo();
+
+    return (
+      <div className="space-y-6">
+        {/* Phase indicator */}
+        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <SparklesIcon className="w-5 h-5 text-purple-600" />
+              <h4 className="font-semibold text-purple-900">{phaseInfo.title}</h4>
+            </div>
+            <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
+              {phaseInfo.count}
+            </span>
+          </div>
+          <p className="text-sm text-purple-700">
+            {phaseInfo.description}
+          </p>
+        </div>
+
+        {/* Facility Type Selection */}
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-gray-700">
+            施設タイプを選択 <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {FACILITY_TYPES.map((facility) => (
+              <button
+                key={facility.id}
+                onClick={() => handleFacilityTypeChange(facility.id)}
+                className={`px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+                  commercialContext.facilityType === facility.id
+                    ? 'bg-purple-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                }`}
+              >
+                {facility.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Original Space Type Selection */}
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-gray-700">
+            元の空間タイプを選択 <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {ORIGINAL_SPACE_TYPES.map((space) => (
+              <button
+                key={space.id}
+                onClick={() => handleOriginalSpaceTypeChange(space.id)}
+                className={`px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+                  commercialContext.originalSpaceType === space.id
+                    ? 'bg-indigo-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                }`}
+              >
+                {space.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Concept Keywords */}
+        <div className="space-y-3">
+          <label htmlFor="conceptKeywords" className="block text-sm font-semibold text-gray-700">
+            コンセプトキーワード（任意）
+          </label>
+          <input
+            id="conceptKeywords"
+            type="text"
+            value={commercialContext.conceptKeywords.join(', ')}
+            onChange={(e) => handleConceptKeywordsChange(e.target.value.split(',').map(k => k.trim()).filter(k => k))}
+            placeholder="例: モダン, 明るい, オープンスペース"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+          <p className="text-xs text-gray-500">複数のキーワードをカンマ区切りで入力してください</p>
+        </div>
+
+        {/* Target Scale */}
+        <div className="space-y-3">
+          <label htmlFor="targetScale" className="block text-sm font-semibold text-gray-700">
+            ターゲット規模（任意）
+          </label>
+          <input
+            id="targetScale"
+            type="text"
+            value={commercialContext.targetScale}
+            onChange={(e) => handleTargetScaleChange(e.target.value)}
+            placeholder="例: 100㎡、20席、5部屋"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Phase 2: Zoning fields */}
+        {(currentPhase === 'zoning' || currentPhase === 'detail_design' || currentPhase === 'finishing') && (
+          <>
+            <div className="border-t border-gray-200 pt-6">
+              <h5 className="text-sm font-semibold text-gray-700 mb-4">ゾーニング設定</h5>
+
+              {/* Area Selection */}
+              <div className="space-y-3 mb-4">
+                <label className="block text-sm font-semibold text-gray-700">
+                  エリア構成（複数選択可）
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['エントランス', 'メインエリア', '待合スペース', '作業スペース', 'プライベートルーム', 'バックヤード', 'トイレ', '収納'].map((area) => (
+                    <button
+                      key={area}
+                      onClick={() => {
+                        const areas = commercialContext.zoningData.areas.includes(area)
+                          ? commercialContext.zoningData.areas.filter(a => a !== area)
+                          : [...commercialContext.zoningData.areas, area];
+                        handleZoningAreasChange(areas);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        commercialContext.zoningData.areas.includes(area)
+                          ? 'bg-teal-600 text-white shadow'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {area}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Flow Pattern */}
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-gray-700">
+                  動線パターン
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['直線的', '回遊型', 'センター集中', 'エリア分離'].map((pattern) => (
+                    <button
+                      key={pattern}
+                      onClick={() => handleFlowPatternChange(pattern)}
+                      className={`px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+                        commercialContext.zoningData.flowPattern === pattern
+                          ? 'bg-teal-600 text-white shadow-lg'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                      }`}
+                    >
+                      {pattern}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Phase 3: Detail Design fields */}
+        {(currentPhase === 'detail_design' || currentPhase === 'finishing') && (
+          <>
+            <div className="border-t border-gray-200 pt-6">
+              <h5 className="text-sm font-semibold text-gray-700 mb-4">詳細デザイン設定</h5>
+
+              {/* Color Scheme */}
+              <div className="space-y-3 mb-4">
+                <label className="block text-sm font-semibold text-gray-700">
+                  カラースキーム（複数選択可）
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['ホワイト基調', 'ダークトーン', 'ナチュラルウッド', 'グレージュ', 'ビビッドアクセント', 'パステル', 'モノトーン', 'アースカラー'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => {
+                        const colors = commercialContext.designDetails.colorScheme.includes(color)
+                          ? commercialContext.designDetails.colorScheme.filter(c => c !== color)
+                          : [...commercialContext.designDetails.colorScheme, color];
+                        handleColorSchemeChange(colors);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        commercialContext.designDetails.colorScheme.includes(color)
+                          ? 'bg-pink-600 text-white shadow'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Materials */}
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-gray-700">
+                  素材（複数選択可）
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['無垢材', 'コンクリート', 'タイル', '大理石', 'スチール', 'ガラス', 'ラタン', '漆喰'].map((material) => (
+                    <button
+                      key={material}
+                      onClick={() => {
+                        const materials = commercialContext.designDetails.materials.includes(material)
+                          ? commercialContext.designDetails.materials.filter(m => m !== material)
+                          : [...commercialContext.designDetails.materials, material];
+                        handleMaterialsChange(materials);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        commercialContext.designDetails.materials.includes(material)
+                          ? 'bg-amber-600 text-white shadow'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {material}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Phase 4: Additional instructions */}
+        {currentPhase === 'finishing' && (
+          <div className="border-t border-gray-200 pt-6">
+            <h5 className="text-sm font-semibold text-gray-700 mb-3">追加の指示（任意）</h5>
+            <textarea
+              id="finishingInstructions"
+              rows={4}
+              placeholder="例: 照明をより明るく、天井を高く見せる工夫を..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+          </div>
+        )}
+
+        {/* Generate Button */}
+        <button
+          onClick={() => {
+            const additionalInstructions = currentPhase === 'finishing'
+              ? (document.getElementById('finishingInstructions') as HTMLTextAreaElement)?.value || ''
+              : '';
+            handleGenerate(additionalInstructions);
+          }}
+          disabled={!canGenerate || isDisabled}
+          className={`w-full px-6 py-4 rounded-lg font-semibold text-base transition-all ${
+            !canGenerate || isDisabled
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-lg'
+          }`}
+        >
+          {isDisabled ? (
+            <div className="flex items-center justify-center gap-2">
+              <SpinnerIcon className="w-5 h-5 animate-spin" />
+              生成中...
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <SparklesIcon className="w-5 h-5" />
+              {currentPhase === 'facility_definition' && '施設定義を生成'}
+              {currentPhase === 'zoning' && 'ゾーニングを生成'}
+              {currentPhase === 'detail_design' && '詳細デザインを生成'}
+              {currentPhase === 'finishing' && '最終仕上げを生成'}
+            </div>
+          )}
+        </button>
+      </div>
+    );
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'oneClick':
@@ -2319,28 +2776,68 @@ const RenovationPanel: React.FC<RenovationPanelProps> = ({
         <h3 className="text-lg font-bold text-gray-800">リノベーションを実行</h3>
         <FeatureTip tip="複数のスタイルを試して比較することで、お客様により多くの選択肢を提案できます。「かんたん」タブのワンタップおまかせ機能なら、AIが自動で最適なリノベーションを提案します。" />
       </div>
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex flex-wrap gap-x-2 gap-y-1" aria-label="Tabs">
-          {TABS.map((tab) => (
+
+      {/* Commercial mode toggle (development only) */}
+      {featureFlags.enableCommercialMode && onRenovationSubModeChange && (
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg border border-purple-200">
+          <p className="text-sm font-semibold text-gray-700 mb-3">対象施設タイプ</p>
+          <div className="grid grid-cols-2 gap-3">
             <button
-              key={tab.id}
-              onClick={() => !isStep1 && handleTabClick(tab.id)}
-              disabled={isStep1 && tab.id !== 'oneClick'}
-              className={`${
-                activeTab === tab.id
-                  ? 'border-indigo-500 text-indigo-600'
-                  : isStep1 && tab.id !== 'oneClick'
-                  ? 'border-transparent text-gray-400 cursor-not-allowed'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } flex items-center gap-2 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-all`}
+              onClick={() => onRenovationSubModeChange('residential')}
+              className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                renovationSubMode === 'residential'
+                  ? 'bg-indigo-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+              }`}
             >
-              <tab.icon className="w-5 h-5"/>
-              {tab.name}
+              <HomeModernIcon className="w-5 h-5 inline-block mr-2" />
+              住宅リノベーション
             </button>
-          ))}
-        </nav>
-      </div>
-      <div>{renderTabContent()}</div>
+            <button
+              onClick={() => onRenovationSubModeChange('commercial')}
+              className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                renovationSubMode === 'commercial'
+                  ? 'bg-purple-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <BuildingStorefrontIcon className="w-5 h-5 inline-block mr-2" />
+              商業施設リノベーション
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Residential mode: Show tabs */}
+      {renovationSubMode === 'residential' && (
+        <>
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex flex-wrap gap-x-2 gap-y-1" aria-label="Tabs">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => !isStep1 && handleTabClick(tab.id)}
+                  disabled={isStep1 && tab.id !== 'oneClick'}
+                  className={`${
+                    activeTab === tab.id
+                      ? 'border-indigo-500 text-indigo-600'
+                      : isStep1 && tab.id !== 'oneClick'
+                      ? 'border-transparent text-gray-400 cursor-not-allowed'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } flex items-center gap-2 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-all`}
+                >
+                  <tab.icon className="w-5 h-5"/>
+                  {tab.name}
+                </button>
+              ))}
+            </nav>
+          </div>
+          <div>{renderTabContent()}</div>
+        </>
+      )}
+
+      {/* Commercial mode: Show facility setup UI */}
+      {renovationSubMode === 'commercial' && renderCommercialModeUI()}
     </div>
   );
 };

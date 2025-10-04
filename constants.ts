@@ -1,4 +1,4 @@
-import type { RenovationCategory, RenovationStyle, FurnitureStyle, RoomType, ArchOption, SketchCategory, SketchFinetuneTab, SketchFinetuneOption, ExteriorColorOption, ExteriorMaterialOption, PaintType, WallpaperMaterialId, FurnitureCategoryId, FurnitureMaterialId } from './types';
+import type { RenovationCategory, RenovationStyle, FurnitureStyle, RoomType, ArchOption, SketchCategory, SketchFinetuneTab, SketchFinetuneOption, ExteriorColorOption, ExteriorMaterialOption, PaintType, WallpaperMaterialId, FurnitureCategoryId, FurnitureMaterialId, FacilityType, OriginalSpaceType, CommercialStep, CommercialAdjustmentItem, CommercialAdjustmentCategory } from './types';
 import { PaintBrushIcon, SwatchIcon, CubeIcon, EyeIcon, HomeModernIcon, EditIcon, UserGroupIcon, SunIcon, PhotoIcon } from './components/Icon';
 
 export const OMAKASE_PROMPT = "この部屋の雰囲気を分析し、あなたの美的センスで最も魅力的になるように全面的にリノベーションしてください。スタイルやテーマは自由にお任せします。";
@@ -694,4 +694,290 @@ export const TUTORIAL_PRODUCTS = {
       price: 150000,
     }
   ]
+};
+
+// ===== Commercial Facility Renovation Constants (Development Only) =====
+
+/**
+ * Commercial facility types with Japanese labels
+ */
+export const FACILITY_TYPES: { id: FacilityType; name: string; description: string }[] = [
+  { id: 'office', name: 'オフィス空間', description: 'コワーキング、企業オフィス、フリーアドレスなど' },
+  { id: 'hotel', name: 'ホテル・宿泊施設', description: 'ビジネスホテル、シティホテル、リゾートホテルなど' },
+  { id: 'retail', name: '小売店舗', description: 'アパレル、カフェ、レストラン、物販店など' },
+  { id: 'medical', name: '医療・クリニック', description: '内科、歯科、美容クリニック、整骨院など' },
+  { id: 'education', name: '教育施設', description: '塾、スクール、研修施設など' },
+  { id: 'fitness', name: 'フィットネス・ジム', description: '24時間ジム、パーソナルジム、ヨガスタジオなど' },
+  { id: 'salon', name: 'サロン・スパ', description: '美容院、ネイルサロン、エステ、リラクゼーションなど' },
+  { id: 'coworking', name: 'コワーキングスペース', description: 'シェアオフィス、レンタルスペース、ワークラウンジなど' },
+];
+
+/**
+ * Original space types before renovation
+ */
+export const ORIGINAL_SPACE_TYPES: { id: OriginalSpaceType; name: string }[] = [
+  { id: 'warehouse', name: '倉庫・工場' },
+  { id: 'existing_office', name: '既存オフィス' },
+  { id: 'former_store', name: '元店舗' },
+  { id: 'residence', name: '住宅' },
+  { id: 'skeleton', name: 'スケルトン' },
+];
+
+/**
+ * Commercial renovation workflow steps
+ */
+export const COMMERCIAL_STEPS: { id: CommercialStep; name: string; description: string; targetGenerations: string }[] = [
+  {
+    id: 'facility_definition',
+    name: 'フェーズ1: 施設定義',
+    description: '元空間タイプ、目標施設タイプ、基本コンセプトを決定',
+    targetGenerations: '1-2回生成'
+  },
+  {
+    id: 'zoning',
+    name: 'フェーズ2: ゾーニング・レイアウト',
+    description: '全体レイアウト、エリア配置、動線計画',
+    targetGenerations: '3-5回生成'
+  },
+  {
+    id: 'detail_design',
+    name: 'フェーズ3: 詳細デザイン',
+    description: 'エリアごとのデザインテーマ、カラー、素材、照明、家具配置',
+    targetGenerations: '6-8回生成'
+  },
+  {
+    id: 'finishing',
+    name: 'フェーズ4: 仕上げ',
+    description: 'ブランディング、装飾、ロゴ・サイン、小物・緑・ファブリック',
+    targetGenerations: '9-12回生成'
+  },
+];
+
+/**
+ * Facility-specific adjustment items
+ * Each facility type has unique customization options
+ */
+export const FACILITY_ADJUSTMENT_ITEMS: Record<FacilityType, CommercialAdjustmentCategory[]> = {
+  office: [
+    {
+      id: 'office-layout',
+      name: 'レイアウト形式',
+      icon: () => null, // TODO: Add icon component
+      items: [
+        { id: 'open-office', name: 'オープンオフィス', promptFragment: 'オープンオフィスレイアウト' },
+        { id: 'private-office', name: '個室型オフィス', promptFragment: '個室型オフィスレイアウト' },
+        { id: 'hybrid-office', name: 'ハイブリッド型', promptFragment: 'オープンと個室を組み合わせたハイブリッド型レイアウト' },
+      ],
+    },
+    {
+      id: 'office-desk',
+      name: 'デスク配置',
+      icon: () => null,
+      items: [
+        { id: 'free-address', name: 'フリーアドレス', promptFragment: 'フリーアドレス形式のデスク配置' },
+        { id: 'fixed-seat', name: '固定席', promptFragment: '固定席形式のデスク配置' },
+        { id: 'hoteling', name: 'ホテリング', promptFragment: '予約制ホテリング形式のデスク配置' },
+      ],
+    },
+    {
+      id: 'office-meeting',
+      name: '会議エリア',
+      icon: () => null,
+      items: [
+        { id: 'meeting-room', name: '会議室', promptFragment: '独立した会議室エリア' },
+        { id: 'phone-booth', name: '電話ブース', promptFragment: '個人用電話ブースエリア' },
+        { id: 'collaboration-space', name: 'コラボレーションスペース', promptFragment: 'オープンなコラボレーションスペース' },
+      ],
+    },
+  ],
+
+  hotel: [
+    {
+      id: 'hotel-grade',
+      name: 'ホテルグレード',
+      icon: () => null,
+      items: [
+        { id: 'business-hotel', name: 'ビジネスホテル', promptFragment: 'ビジネスホテルグレード' },
+        { id: 'city-hotel', name: 'シティホテル', promptFragment: 'シティホテルグレード' },
+        { id: 'luxury-hotel', name: 'ラグジュアリーホテル', promptFragment: 'ラグジュアリーホテルグレード' },
+        { id: 'resort-hotel', name: 'リゾートホテル', promptFragment: 'リゾートホテルグレード' },
+      ],
+    },
+    {
+      id: 'hotel-layout',
+      name: '機能レイアウト',
+      icon: () => null,
+      items: [
+        { id: 'front-desk', name: 'フロントデスク', promptFragment: 'フロントデスクエリア' },
+        { id: 'lounge', name: 'ラウンジ', promptFragment: 'ゲストラウンジエリア' },
+        { id: 'waiting-area', name: '待合スペース', promptFragment: '待合・ウェイティングスペース' },
+      ],
+    },
+  ],
+
+  retail: [
+    {
+      id: 'retail-type',
+      name: '業種タイプ',
+      icon: () => null,
+      items: [
+        { id: 'apparel', name: 'アパレル', promptFragment: 'アパレル店舗' },
+        { id: 'cafe', name: 'カフェ', promptFragment: 'カフェ・喫茶店' },
+        { id: 'restaurant', name: 'レストラン', promptFragment: 'レストラン・飲食店' },
+        { id: 'goods', name: '物販・雑貨', promptFragment: '物販・雑貨店' },
+        { id: 'salon-shop', name: 'サロン', promptFragment: 'サロン店舗' },
+      ],
+    },
+    {
+      id: 'retail-layout',
+      name: 'レイアウトパターン',
+      icon: () => null,
+      items: [
+        { id: 'grid-layout', name: 'グリッド配置', promptFragment: 'グリッド配置レイアウト' },
+        { id: 'free-layout', name: 'フリーレイアウト', promptFragment: 'フリーレイアウト' },
+        { id: 'racetrack-layout', name: 'レーストラック型', promptFragment: 'レーストラック型レイアウト' },
+      ],
+    },
+    {
+      id: 'retail-display',
+      name: 'ディスプレイ方式',
+      icon: () => null,
+      items: [
+        { id: 'wall-display', name: '壁面ディスプレイ', promptFragment: '壁面ディスプレイ方式' },
+        { id: 'table-display', name: 'テーブルディスプレイ', promptFragment: 'テーブルディスプレイ方式' },
+        { id: 'hanging-display', name: 'ハンガーラック', promptFragment: 'ハンガーラック方式' },
+      ],
+    },
+  ],
+
+  medical: [
+    {
+      id: 'medical-type',
+      name: '施設タイプ',
+      icon: () => null,
+      items: [
+        { id: 'general-clinic', name: '一般内科クリニック', promptFragment: '一般内科クリニック' },
+        { id: 'dental-clinic', name: '歯科クリニック', promptFragment: '歯科クリニック' },
+        { id: 'beauty-clinic', name: '美容クリニック', promptFragment: '美容クリニック' },
+        { id: 'orthopedic', name: '整骨院・整体院', promptFragment: '整骨院・整体院' },
+      ],
+    },
+    {
+      id: 'medical-area',
+      name: 'エリア構成',
+      icon: () => null,
+      items: [
+        { id: 'waiting-room', name: '待合室', promptFragment: '待合室エリア' },
+        { id: 'reception', name: '受付', promptFragment: '受付エリア' },
+        { id: 'consultation-room', name: '診察室', promptFragment: '診察室エリア' },
+        { id: 'treatment-room', name: '処置室', promptFragment: '処置室エリア' },
+      ],
+    },
+    {
+      id: 'medical-privacy',
+      name: 'プライバシー配慮',
+      icon: () => null,
+      items: [
+        { id: 'partition', name: 'パーティション区切り', promptFragment: 'パーティションで区切られたプライバシー' },
+        { id: 'semi-private', name: '半個室', promptFragment: '半個室形式' },
+        { id: 'full-private', name: '完全個室', promptFragment: '完全個室形式' },
+      ],
+    },
+  ],
+
+  education: [
+    {
+      id: 'education-classroom',
+      name: '教室タイプ',
+      icon: () => null,
+      items: [
+        { id: 'lecture-style', name: '講義型', promptFragment: '講義型教室' },
+        { id: 'seminar-style', name: 'セミナー型', promptFragment: 'セミナー型教室' },
+        { id: 'workshop-style', name: 'ワークショップ型', promptFragment: 'ワークショップ型教室' },
+      ],
+    },
+    {
+      id: 'education-seating',
+      name: '座席配置',
+      icon: () => null,
+      items: [
+        { id: 'theater-seating', name: 'シアター配置', promptFragment: 'シアター形式の座席配置' },
+        { id: 'island-seating', name: 'アイランド配置', promptFragment: 'アイランド形式の座席配置' },
+        { id: 'u-shape-seating', name: 'U字型配置', promptFragment: 'U字型座席配置' },
+      ],
+    },
+  ],
+
+  fitness: [
+    {
+      id: 'fitness-type',
+      name: 'ジムタイプ',
+      icon: () => null,
+      items: [
+        { id: '24h-gym', name: '24時間ジム', promptFragment: '24時間ジム' },
+        { id: 'personal-gym', name: 'パーソナルジム', promptFragment: 'パーソナルジム' },
+        { id: 'group-fitness', name: 'グループフィットネス', promptFragment: 'グループフィットネススタジオ' },
+      ],
+    },
+    {
+      id: 'fitness-zoning',
+      name: 'ゾーニング',
+      icon: () => null,
+      items: [
+        { id: 'cardio-zone', name: '有酸素エリア', promptFragment: '有酸素運動エリア' },
+        { id: 'weight-zone', name: 'ウェイトエリア', promptFragment: 'ウェイトトレーニングエリア' },
+        { id: 'stretch-zone', name: 'ストレッチエリア', promptFragment: 'ストレッチエリア' },
+        { id: 'studio-zone', name: 'スタジオエリア', promptFragment: 'スタジオエリア' },
+      ],
+    },
+  ],
+
+  salon: [
+    {
+      id: 'salon-type',
+      name: 'サロンタイプ',
+      icon: () => null,
+      items: [
+        { id: 'hair-salon', name: 'ヘアサロン', promptFragment: 'ヘアサロン' },
+        { id: 'nail-salon', name: 'ネイルサロン', promptFragment: 'ネイルサロン' },
+        { id: 'aesthetic-salon', name: 'エステサロン', promptFragment: 'エステティックサロン' },
+        { id: 'relaxation-salon', name: 'リラクゼーションサロン', promptFragment: 'リラクゼーションサロン' },
+      ],
+    },
+    {
+      id: 'salon-layout',
+      name: 'レイアウト',
+      icon: () => null,
+      items: [
+        { id: 'open-salon', name: 'オープン型', promptFragment: 'オープン型レイアウト' },
+        { id: 'semi-private-salon', name: '半個室型', promptFragment: '半個室型レイアウト' },
+        { id: 'private-salon', name: '完全個室型', promptFragment: '完全個室型レイアウト' },
+      ],
+    },
+  ],
+
+  coworking: [
+    {
+      id: 'coworking-space',
+      name: 'スペースタイプ',
+      icon: () => null,
+      items: [
+        { id: 'open-desk', name: 'オープンデスク', promptFragment: 'オープンデスクエリア' },
+        { id: 'private-booth', name: 'プライベートブース', promptFragment: 'プライベートブースエリア' },
+        { id: 'meeting-room', name: '会議室', promptFragment: '会議室エリア' },
+        { id: 'lounge-area', name: 'ラウンジエリア', promptFragment: 'ラウンジエリア' },
+      ],
+    },
+    {
+      id: 'coworking-seating',
+      name: '座席バリエーション',
+      icon: () => null,
+      items: [
+        { id: 'fixed-desk', name: '固定デスク', promptFragment: '固定デスク席' },
+        { id: 'hot-desk', name: 'ホットデスク', promptFragment: 'ホットデスク（自由席）' },
+        { id: 'sofa-seating', name: 'ソファ席', promptFragment: 'ソファ席エリア' },
+        { id: 'standing-desk', name: 'スタンディングデスク', promptFragment: 'スタンディングデスク席' },
+      ],
+    },
+  ],
 };

@@ -324,3 +324,99 @@ export interface TenantEmailSettings {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+// ===== Commercial Facility Renovation Types (Development Only) =====
+
+/**
+ * Renovation sub-mode for selecting residential or commercial facility renovation
+ * Commercial mode is only available when VITE_ENABLE_COMMERCIAL_MODE=true
+ */
+export type RenovationSubMode = 'residential' | 'commercial';
+
+/**
+ * Commercial facility types
+ * Each type has specific adjustment items and workflow requirements
+ */
+export type FacilityType =
+  | 'office'      // オフィス空間
+  | 'hotel'       // ホテル・宿泊施設
+  | 'retail'      // 小売店舗
+  | 'medical'     // 医療・クリニック
+  | 'education'   // 教育施設
+  | 'fitness'     // フィットネス・ジム
+  | 'salon'       // サロン・スパ
+  | 'coworking';  // コワーキングスペース
+
+/**
+ * Original space type before renovation
+ * Important for AI to understand starting conditions
+ */
+export type OriginalSpaceType =
+  | 'warehouse'        // 倉庫
+  | 'existing_office'  // 既存オフィス
+  | 'former_store'     // 元店舗
+  | 'residence'        // 住宅
+  | 'skeleton';        // スケルトン
+
+/**
+ * Commercial renovation workflow steps
+ * Each step builds upon the previous, requiring 2-4 iterations per step
+ */
+export type CommercialStep =
+  | 'facility_definition'  // 施設定義（1-2回生成）
+  | 'zoning'               // ゾーニング・レイアウト（3-5回生成）
+  | 'detail_design'        // 詳細デザイン（6-8回生成）
+  | 'finishing';           // 仕上げ（9-12回生成）
+
+/**
+ * Adjustment item for commercial facility customization
+ * Each facility type has its own set of adjustment items
+ */
+export interface CommercialAdjustmentItem {
+  id: string;
+  name: string;
+  promptFragment: string;
+  options?: string[]; // For dropdown items
+}
+
+/**
+ * Adjustment category for organizing adjustment items
+ */
+export interface CommercialAdjustmentCategory {
+  id: string;
+  name: string;
+  icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  items: CommercialAdjustmentItem[];
+}
+
+/**
+ * Commercial renovation context for cumulative prompt building
+ * Stores all selections and prompt history to maintain consistency across 10+ generations
+ */
+export interface CommercialRenovationContext {
+  facilityType: FacilityType | null;
+  originalSpaceType: OriginalSpaceType | null;
+  currentStep: CommercialStep;
+  generationCount: number; // Current generation number (1-12+)
+
+  // Phase 1: Facility Definition
+  conceptKeywords: string[]; // 基本コンセプト
+  targetScale: string; // 規模（面積・収容人数など）
+
+  // Phase 2: Zoning
+  zoningData: {
+    areas: string[]; // 配置したエリア
+    flowPattern: string; // 動線パターン
+  };
+
+  // Phase 3: Detail Design
+  designDetails: {
+    themes: Map<string, string>; // エリアごとのテーマ
+    colorScheme: string[]; // カラースキーム
+    materials: string[]; // 素材選択
+  };
+
+  // Cumulative prompt history
+  promptHistory: string[]; // Previous prompts to build upon
+  lastGeneratedImageUrl: string | null;
+}
